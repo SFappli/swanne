@@ -726,18 +726,18 @@
 function cssEsc(s){return (typeof CSS!=="undefined"&&CSS.escape)?CSS.escape(s):String(s).replace(/[^a-zA-Z0-9_-]/g,c=>"\\"+c);}
 
 /* ===== Listes par défaut ===== */
-const DEF_PAINS=[["ovaire_d","Ovaire / bas-ventre droit"],["ovaire_g","Ovaire / bas-ventre gauche"],["pelvienne","Douleur pelvienne (bas-ventre)"],["lombaire","Douleurs lombaires"],["dorsale","Douleurs dorsales / haut du dos"],["jambe_d","Jambe droite / sciatique"],["jambe_g","Jambe gauche / sciatique"],["rapports","Pendant les rapports"],["defecation","À la défécation"],["urinaire","Douleurs urinaires"],["tete","Maux de tête / migraine"]];
+const DEF_PAINS=[["ovaire_d","Ovaire / bas-ventre droit"],["ovaire_g","Ovaire / bas-ventre gauche"],["pelvienne","Douleur pelvienne (bas-ventre)"],["lombaire","Douleurs lombaires"],["dorsale","Douleurs dorsales / haut du dos"],["fesse_d","Fesse droite"],["fesse_g","Fesse gauche"],["jambe_d","Jambe droite / sciatique"],["jambe_g","Jambe gauche / sciatique"],["rapports","Pendant les rapports"],["defecation","À la défécation"],["urinaire","Douleurs urinaires"],["tete","Maux de tête / migraine"]];
 const DEF_DIG=[["ballonnements","Ballonnements (ventre gonflé)"],["coliques","Coliques / crampes"],["diarrhee","Diarrhée"],["constipation","Constipation"],["nausees","Nausées"],["vomissements","Vomissements"],["defecation","Douleur à la défécation"],["sang_selles","Sang dans les selles"]];
 const DEF_GEN=[["courbatures","Courbatures"],["febrile","Sensation fébrile"],["sommeil","Troubles du sommeil"],["vertiges","Vertiges"],["humeur","Humeur basse / anxiété"],["saign_anormaux","Saignements inhabituels"],["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"],["dyspareunie","Douleurs pendant / après les rapports"]];
 const DEF_FOG=[["concentration","Concentration difficile"],["oublis","Oublis"],["confusion","Confusion"],["ralenti","Sensation d'être ralenti·e"],["mots","Manque du mot"]];
 const DEF_FOOD=[["gras","Repas gras"],["sucre","Sucre / sucreries"],["alcool","Alcool"],["cafe","Café"],["gluten","Gluten"],["laitages","Produits laitiers"],["epice","Épicé"],["transforme","Ultra-transformé"]];
 const DEF_PTYPES=[["t_crampe","Crampes / spasmes"],["t_brulure","Brûlure"],["t_lancinante","Lancinante / élancements"],["t_poignard","Coup de poignard (aiguë)"],["t_pesanteur","Pesanteur / pression"],["t_decharge","Décharge (type nerf)"],["t_tiraillement","Tiraillement"]];
 /* Zones du schéma corporel : clé -> {fig:'front'|'back', x,y} en coords SVG (0..100 x, 0..200 y) */
-const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},ovaire_g:{fig:"front",x:60,y:82},pelvienne:{fig:"front",x:50,y:95},jambe_d:{fig:"front",x:41,y:150},jambe_g:{fig:"front",x:59,y:150},dorsale:{fig:"back",x:50,y:52},lombaire:{fig:"back",x:50,y:90}};
+const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},ovaire_g:{fig:"front",x:60,y:82},pelvienne:{fig:"front",x:50,y:95},jambe_d:{fig:"front",x:41,y:150},jambe_g:{fig:"front",x:59,y:150},dorsale:{fig:"back",x:50,y:52},lombaire:{fig:"back",x:50,y:90},fesse_d:{fig:"back",x:58,y:110},fesse_g:{fig:"back",x:42,y:110}};
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=8;
+const SCHEMA=9;
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -785,6 +785,11 @@ function migrate(){
     [["dig",[["defecation","Douleur à la défécation"],["sang_selles","Sang dans les selles"]]],
      ["gen",[["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"],["dyspareunie","Douleurs pendant / après les rapports"]]]
     ].forEach(([cat,items])=>{CFG[cat]=CFG[cat]||[];items.forEach(([k,l])=>{if(!CFG[cat].includes(k))CFG[cat].push(k);if(!CFG.labels[k])CFG.labels[k]=l;});});
+    changed=true;
+  }
+  if(CFG.version<9){
+    CFG.pains=CFG.pains||[];
+    [["fesse_d","Fesse droite"],["fesse_g","Fesse gauche"]].forEach(([k,l])=>{if(!CFG.pains.includes(k))CFG.pains.push(k);if(!CFG.labels[k])CFG.labels[k]=l;});
     changed=true;
   }
   if(!CFG.version||CFG.version<SCHEMA){CFG.version=SCHEMA;changed=true;}
