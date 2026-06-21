@@ -1769,11 +1769,15 @@ function ensureGis(){return new Promise((res,rej)=>{
   if(!document.getElementById("gis-script")){const s=document.createElement("script");s.id="gis-script";s.src="https://accounts.google.com/gsi/client";s.async=true;s.onerror=()=>rej(new Error("chargement Google impossible (connexion ?)"));document.head.appendChild(s);}
   const t0=Date.now();(function chk(){if(window.google&&google.accounts&&google.accounts.oauth2)return res();if(Date.now()-t0>9000)return rej(new Error("Google n'a pas répondu"));setTimeout(chk,150);})();
 });}
+/* ID client OAuth « grand public » intégré à l'app. Repli possible vers un ID personnalisé (réglages avancés). */
+const DRIVE_CLIENT_ID_DEFAULT="37340974037-fj58n17n0s0qljeoqgtlluvff9o9ud0q.apps.googleusercontent.com";
+function effClientId(){return (CFG.driveClientId&&CFG.driveClientId.trim())||DRIVE_CLIENT_ID_DEFAULT;}
 function getToken(interactive){return new Promise((res,rej)=>{
   if(driveToken&&Date.now()<driveTokenExp-60000)return res(driveToken);
-  if(!CFG.driveClientId)return rej(new Error("ID client manquant"));
+  const cid=effClientId();
+  if(!cid)return rej(new Error("ID client manquant"));
   ensureGis().then(()=>{
-    if(!tokenClient||tokenClient._cid!==CFG.driveClientId){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CFG.driveClientId,scope:"https://www.googleapis.com/auth/drive.file",callback:()=>{}});tokenClient._cid=CFG.driveClientId;}
+    if(!tokenClient||tokenClient._cid!==cid){tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:"https://www.googleapis.com/auth/drive.file",callback:()=>{}});tokenClient._cid=cid;}
     tokenClient.callback=resp=>{if(resp&&resp.access_token){driveToken=resp.access_token;driveTokenExp=Date.now()+((resp.expires_in||3600)*1000);res(driveToken);}else rej(new Error((resp&&resp.error)||"autorisation refusée"));};
     try{tokenClient.requestAccessToken({prompt:interactive?"consent":""});}catch(e){rej(e);}
   }).catch(rej);
@@ -1795,7 +1799,6 @@ async function driveUpload(interactive){
   CFG.driveLastBackup=new Date().toISOString();await saveConfig();
 }
 async function driveConnect(){
-  if(!CFG.driveClientId){toast("Renseignez d'abord l'ID client Google");return;}
   toast("Ouverture de Google…");
   try{await getToken(true);CFG.driveConnected=true;CFG.driveAuto=true;await driveUpload(true);renderDrive();toast("Drive connecté — première sauvegarde envoyée");}
   catch(e){toast("Connexion Drive échouée : "+(e.message||e));}
@@ -1845,10 +1848,12 @@ function renderDrive(){
   const area=document.getElementById("drive-area");if(!area)return;
   const last=CFG.driveLastBackup?new Date(CFG.driveLastBackup).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):null;
   if(!CFG.driveConnected){
-    area.innerHTML=`<div style="margin-bottom:10px"><label class="wc-label" for="drive-cid">Identifiant client Google (OAuth)</label><input type="text" class="txt" id="drive-cid" placeholder="…apps.googleusercontent.com" value="${CFG.driveClientId||""}"></div><button class="btn btn-primary" id="drive-connect" style="width:100%">Connecter Google Drive</button>`;
-    const cid=document.getElementById("drive-cid");
-    cid.onchange=async()=>{CFG.driveClientId=cid.value.trim();await saveConfig();};
-    document.getElementById("drive-connect").onclick=async()=>{CFG.driveClientId=cid.value.trim();await saveConfig();driveConnect();};
+    area.innerHTML=`<p class="sec-note" style="margin:0 0 10px">Sauvegarde automatique dans <b>votre</b> Google Drive (vos données restent chez vous, nous n'y avons pas accès).</p>
+      <button class="btn btn-primary" id="drive-connect" style="width:100%">Connecter Google Drive</button>
+      <details style="margin-top:12px"><summary class="sec-note" style="cursor:pointer">Options avancées (ID client personnalisé)</summary>
+        <div style="margin-top:8px"><label class="wc-label" for="drive-cid">Identifiant client Google (OAuth) — laisser vide pour utiliser celui de l'application</label>
+        <input type="text" class="txt" id="drive-cid" placeholder="…apps.googleusercontent.com" value="${CFG.driveClientId||""}"></div></details>`;
+    document.getElementById("drive-connect").onclick=async()=>{const cid=document.getElementById("drive-cid");if(cid)CFG.driveClientId=cid.value.trim();await saveConfig();driveConnect();};
   }else{
     area.innerHTML=`
       <div class="treat" style="border:none;padding:6px 0"><span class="tn">Sauvegarde automatique</span><button class="chip" id="drive-auto">Activée</button></div>
