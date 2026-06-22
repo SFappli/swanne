@@ -106,6 +106,14 @@
   .hot{cursor:pointer;stroke:var(--surface);stroke-width:2;transition:r .1s;}
   .hot:hover{stroke:var(--aubergine);}
   .hot-label{font-size:7px;fill:var(--ink-faint);text-anchor:middle;pointer-events:none;}
+  .hot-custom{stroke:var(--rose);stroke-width:2.4;}
+  .hot{touch-action:none;}
+  .hot.dragging{stroke:var(--aubergine);stroke-width:3;filter:drop-shadow(0 1px 3px rgba(67,49,79,.45));}
+  .bodymap-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .zone-hint{font-size:10.5px;color:var(--ink-faint);}
+  .btn-sm{padding:7px 14px;font-size:13px;border-radius:999px;}
+  #bodymap-wrap.addmode .bodyfig svg{outline:2px dashed var(--aubergine);outline-offset:3px;border-radius:10px;cursor:crosshair;}
+  #bodymap-wrap.addmode .cap::after{content:" · touchez ici";color:var(--aubergine);}
 
   .pain{padding:12px 0;border-top:1px solid var(--line);}
   .pain2{display:flex;align-items:flex-start;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:9px;}
@@ -780,6 +788,8 @@ function migrate(){
   if(CFG.driveFileId===undefined){CFG.driveFileId="";changed=true;}
   if(CFG.driveLastBackup===undefined){CFG.driveLastBackup="";changed=true;}
   if(CFG.bigText===undefined){CFG.bigText=false;changed=true;}
+  if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
+  if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
   if(Array.isArray(CFG.pains)&&CFG.pains.includes("jambe")){const i=CFG.pains.indexOf("jambe");CFG.pains.splice(i,1,"jambe_d","jambe_g");CFG.labels.jambe_d=CFG.labels.jambe_d||"Jambe droite / sciatique";CFG.labels.jambe_g=CFG.labels.jambe_g||"Jambe gauche / sciatique";if(!CFG.labels.jambe)CFG.labels.jambe="Jambes / sciatique";changed=true;}
   if(!Array.isArray(CFG.fog)||CFG.fog.length===0){CFG.fog=DEF_FOG.map(x=>x[0]);DEF_FOG.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -856,21 +866,111 @@ function buildSeg(id,opts,getter,onclick,isCycle){
 }
 
 const BODY_KEYS=Object.keys(BODY_ZONES);
+let addZoneMode=false;
+const BODY_SHAPE=`<circle class="body-shape" cx="50" cy="20" r="13"/><rect class="body-shape" x="32" y="34" width="36" height="66" rx="15"/><rect class="body-shape" x="18" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="71" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="34" y="98" width="14" height="86" rx="7"/><rect class="body-shape" x="52" y="98" width="14" height="86" rx="7"/>`;
+function svgCoords(svg,evt){
+  const r=svg.getBoundingClientRect();
+  const px=(evt.clientX!=null?evt.clientX:(evt.changedTouches&&evt.changedTouches[0]?evt.changedTouches[0].clientX:0));
+  const py=(evt.clientY!=null?evt.clientY:(evt.changedTouches&&evt.changedTouches[0]?evt.changedTouches[0].clientY:0));
+  let x=((px-r.left)/r.width)*100, y=((py-r.top)/r.height)*195;
+  return {x:Math.max(4,Math.min(96,x)), y:Math.max(4,Math.min(191,y))};
+}
+function snapZone(fig,x,y){
+  if(!CFG.zoneSnap)return {x,y};
+  let best=null,bd=1e9;
+  BODY_KEYS.forEach(k=>{const z=BODY_ZONES[k];if(z.fig!==fig)return;const d=Math.hypot(z.x-x,z.y-y);if(d<bd){bd=d;best=z;}});
+  return (best&&bd<=8)?{x:best.x,y:best.y}:{x,y};
+}
+function startAddZone(){
+  addZoneMode=true;
+  const w=document.getElementById("bodymap-wrap");if(w)w.classList.add("addmode");
+  toast("Touchez la silhouette à l'endroit de la douleur");
+}
+async function placeZone(fig,x,y){
+  addZoneMode=false;
+  const w=document.getElementById("bodymap-wrap");if(w)w.classList.remove("addmode");
+  const s=snapZone(fig,x,y);
+  const label=(window.prompt("Nom de cette zone (ex. hanche gauche, périnée, aine…)")||"").trim();
+  if(!label){buildBodyMap();paintBodyMap();return;}
+  const id=newKey("z");
+  CFG.customZones.push({id,fig,x:Math.round(s.x*10)/10,y:Math.round(s.y*10)/10,label});
+  CFG.labels[id]=label;
+  if(!CFG.pains.includes(id))CFG.pains.push(id);
+  await saveConfig();
+  buildBodyMap();paintBodyMap();
+  if(typeof buildForm==="function")buildForm();
+  if(typeof syncForm==="function")syncForm();
+  if(typeof renderSettings==="function")renderSettings();
+  toast("Zone « "+label+" » ajoutée");
+}
+async function deleteZone(id){
+  const z=(CFG.customZones||[]).find(z=>z.id===id);if(!z)return;
+  if(!window.confirm("Supprimer la zone « "+(CFG.labels[id]||"cette zone")+" » ? Les douleurs déjà enregistrées resteront dans l'historique."))return;
+  CFG.customZones=CFG.customZones.filter(z=>z.id!==id);
+  CFG.pains=CFG.pains.filter(k=>k!==id);
+  await saveConfig();
+  buildBodyMap();paintBodyMap();
+  if(typeof buildForm==="function")buildForm();
+  if(typeof syncForm==="function")syncForm();
+  if(typeof renderSettings==="function")renderSettings();
+  toast("Zone supprimée");
+}
+function bindHot(c){
+  const k=c.dataset.k, custom=c.dataset.custom==="1";
+  if(!custom){ c.onclick=()=>{ if(addZoneMode)return; openModal(k); }; return; }
+  const svg=c.closest("svg");
+  const THRESH=4; let startX=0,startY=0,moved=false,dragging=false,lpTimer=null,pid=null;
+  const clearLP=()=>{ if(lpTimer){clearTimeout(lpTimer);lpTimer=null;} };
+  c.style.cursor="grab";
+  c.addEventListener("pointerdown",evt=>{
+    if(addZoneMode)return;
+    evt.preventDefault();
+    pid=evt.pointerId; try{c.setPointerCapture(pid);}catch(e){}
+    startX=evt.clientX;startY=evt.clientY;moved=false;dragging=false;
+    clearLP();
+    lpTimer=setTimeout(()=>{ if(!moved&&!dragging){ try{c.releasePointerCapture(pid);}catch(e){} pid=null; deleteZone(k); } },600);
+  });
+  c.addEventListener("pointermove",evt=>{
+    if(pid==null)return;
+    const dx=evt.clientX-startX, dy=evt.clientY-startY;
+    if(!moved && Math.hypot(dx,dy)>THRESH){ moved=true;dragging=true;clearLP();c.classList.add("dragging");c.setAttribute("r","12"); }
+    if(dragging){ evt.preventDefault(); const co=svgCoords(svg,evt); c.setAttribute("cx",co.x); c.setAttribute("cy",co.y); }
+  });
+  const finish=async evt=>{
+    if(pid==null)return;
+    clearLP(); try{c.releasePointerCapture(pid);}catch(e){}
+    if(dragging){
+      const co=svgCoords(svg,evt), s=snapZone(svg.dataset.fig,co.x,co.y);
+      c.setAttribute("cx",s.x);c.setAttribute("cy",s.y);c.setAttribute("r","10");c.classList.remove("dragging");
+      const z=(CFG.customZones||[]).find(z=>z.id===k);
+      if(z){ z.x=Math.round(s.x*10)/10; z.y=Math.round(s.y*10)/10; await saveConfig(); paintBodyMap(); toast("Zone déplacée"); }
+    } else if(!moved){ openModal(k); }
+    pid=null;dragging=false;moved=false;
+  };
+  c.addEventListener("pointerup",finish);
+  c.addEventListener("pointercancel",()=>{ clearLP();c.classList.remove("dragging");c.setAttribute("r","10");pid=null;dragging=false;moved=false; });
+}
 function buildBodyMap(){
-  const wrap=document.getElementById("bodymap-wrap");
-  const zones=CFG.pains.filter(k=>BODY_KEYS.includes(k));
-  if(!zones.length){wrap.innerHTML="";return;}
+  const wrap=document.getElementById("bodymap-wrap");if(!wrap)return;
+  const builtin=CFG.pains.filter(k=>BODY_KEYS.includes(k)).map(k=>({key:k,x:BODY_ZONES[k].x,y:BODY_ZONES[k].y,fig:BODY_ZONES[k].fig,custom:false}));
+  const custom=(CFG.customZones||[]).map(z=>({key:z.id,x:z.x,y:z.y,fig:z.fig,custom:true}));
+  const all=builtin.concat(custom);
   function fig(side,title){
-    const pts=zones.filter(k=>BODY_ZONES[k].fig===side);
-    const hotspots=pts.map(k=>{const z=BODY_ZONES[k];return `<circle class="hot" data-k="${k}" cx="${z.x}" cy="${z.y}" r="8"></circle>`;}).join("");
-    const shape = side==="front"
-      ? `<circle class="body-shape" cx="50" cy="20" r="13"/><rect class="body-shape" x="32" y="34" width="36" height="66" rx="15"/><rect class="body-shape" x="18" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="71" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="34" y="98" width="14" height="86" rx="7"/><rect class="body-shape" x="52" y="98" width="14" height="86" rx="7"/>`
-      : `<circle class="body-shape" cx="50" cy="20" r="13"/><rect class="body-shape" x="32" y="34" width="36" height="66" rx="15"/><rect class="body-shape" x="18" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="71" y="40" width="11" height="48" rx="5"/><rect class="body-shape" x="34" y="98" width="14" height="86" rx="7"/><rect class="body-shape" x="52" y="98" width="14" height="86" rx="7"/>`;
-    return `<div class="bodyfig"><svg viewBox="0 0 100 195" id="svg-${side}">${shape}${hotspots}</svg><div class="cap">${title}</div></div>`;
+    const pts=all.filter(p=>p.fig===side);
+    const hotspots=pts.map(p=>`<circle class="hot${p.custom?' hot-custom':''}" data-k="${p.key}" data-custom="${p.custom?1:0}" cx="${p.x}" cy="${p.y}" r="8"></circle>`).join("");
+    return `<div class="bodyfig"><svg viewBox="0 0 100 195" data-fig="${side}">${BODY_SHAPE}${hotspots}</svg><div class="cap">${title}</div></div>`;
   }
-  const haveFront=zones.some(k=>BODY_ZONES[k].fig==="front"), haveBack=zones.some(k=>BODY_ZONES[k].fig==="back");
-  wrap.innerHTML=`<div class="bodymap">${haveFront?fig("front","Face"):""}${haveBack?fig("back","Dos"):""}</div>`;
-  wrap.querySelectorAll(".hot").forEach(c=>c.onclick=()=>openModal(c.dataset.k));
+  wrap.innerHTML=`<div class="bodymap">${fig("front","Face")}${fig("back","Dos")}</div>`+
+    `<div class="bodymap-actions"><button type="button" class="btn btn-ghost btn-sm" id="zone-add">+ Ajouter une zone</button><span class="zone-hint">Appui long sur un point ajouté pour le supprimer</span></div>`;
+  wrap.querySelectorAll(".hot").forEach(bindHot);
+  wrap.querySelectorAll("svg[data-fig]").forEach(svg=>{
+    svg.addEventListener("click",evt=>{
+      if(!addZoneMode)return;
+      if(evt.target&&evt.target.classList&&evt.target.classList.contains("hot"))return;
+      const co=svgCoords(svg,evt);placeZone(svg.dataset.fig,co.x,co.y);
+    });
+  });
+  const ab=document.getElementById("zone-add");if(ab)ab.onclick=startAddZone;
 }
 function paintBodyMap(){
   document.querySelectorAll("#bodymap-wrap .hot").forEach(c=>{const v=entry.pains[c.dataset.k]||0;c.setAttribute("fill",intensityColor(v));c.setAttribute("r",v>0?10:7.5);});
@@ -1252,7 +1352,7 @@ async function removeSymptom(cat,k){
   if(cat==="treatments"){CFG.treatments=CFG.treatments.filter(t=>t.id!==k);await saveConfig();buildTreatList();syncTreat();renderSettings();return;}
   if(cat==="ptypes"){CFG.ptypes=CFG.ptypes.filter(x=>x!==k);await saveConfig();renderSettings();return;}
   CFG[cat]=CFG[cat].filter(x=>x!==k);
-  if(cat==="pains")delete entry.pains[k];else{const a=entry[cat],i=a.indexOf(k);if(i>=0)a.splice(i,1);}
+  if(cat==="pains"){delete entry.pains[k];if(CFG.customZones)CFG.customZones=CFG.customZones.filter(z=>z.id!==k);}else{const a=entry[cat],i=a.indexOf(k);if(i>=0)a.splice(i,1);}
   await saveConfig();buildForm();syncForm();renderSettings();
 }
 function renderSettings(){
