@@ -110,6 +110,10 @@
   #bodymap-wrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
   .hot{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
   .hot.dragging{stroke:var(--aubergine);stroke-width:3;filter:drop-shadow(0 1px 3px rgba(67,49,79,.45));}
+  .bilat{display:flex;align-items:center;gap:9px;margin-top:13px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;user-select:none;}
+  .bilat input{width:19px;height:19px;accent-color:var(--aubergine);flex:0 0 auto;}
+  .bilat b{color:var(--aubergine-deep);}
+  .chip-add{border-style:dashed!important;color:var(--aubergine)!important;background:transparent!important;}
   .bodymap-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
   .zone-hint{font-size:10.5px;color:var(--ink-faint);}
   .btn-sm{padding:7px 14px;font-size:13px;border-radius:999px;}
@@ -698,6 +702,7 @@
     <div class="scale-cue"><span>aucune</span><span>insupportable</span></div>
     <div class="mtypes-label" id="modal-types-label">Type de douleur ressentie (optionnel)</div>
     <div class="mzones" id="modal-types"></div>
+    <label class="bilat" id="modal-bilat-wrap" style="display:none"><input type="checkbox" id="modal-bilat"><span>Bilatéral — noter aussi à <b id="modal-bilat-side"></b></span></label>
     <input type="text" class="pain-note show" id="modal-note" placeholder="Note (optionnel)…" style="margin-top:14px">
     <div class="mbtns"><button class="btn btn-primary" id="modal-ok">OK</button></div>
   </div>
@@ -813,6 +818,7 @@ function migrate(){
 }
 function labelOf(k){return CFG.labels[k]||k;}
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function cleanText(s,max){s=(s==null?"":String(s)).replace(/[<>]/g,"").replace(/\s+/g," ").trim();return max?s.slice(0,max):s;}
 function tDate(s){if(!s)return"";const p=String(s).split("-");return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
 function treatPeriod(t){const a=tDate(t.start),b=tDate(t.end);if(a&&b)return `${a} → ${b}`;if(a)return `depuis ${a}`;if(b)return `arrêté le ${b}`;return "";}
 function autoEff(st){if(!st)return null;const n=(st.oui||0)+(st.peu||0)+(st.non||0);if(!n)return null;return {val:Math.round((10*(st.oui||0)+5*(st.peu||0))/n),n};}
@@ -891,7 +897,7 @@ async function placeZone(fig,x,y){
   addZoneMode=false;
   const w=document.getElementById("bodymap-wrap");if(w)w.classList.remove("addmode");
   const s=snapZone(fig,x,y);
-  const label=(window.prompt("Nom de cette zone (ex. hanche gauche, périnée, aine…)")||"").trim();
+  const label=cleanText(window.prompt("Nom de cette zone (ex. hanche gauche, périnée, aine…)"),60);
   if(!label){buildBodyMap();paintBodyMap();return;}
   const id=newKey("z");
   CFG.customZones.push({id,fig,x:Math.round(s.x*10)/10,y:Math.round(s.y*10)/10,label});
@@ -1139,7 +1145,7 @@ function syncTreat(){
   });
 }
 let treatSaveT=null;
-function scheduleTreatSave(){clearTimeout(treatSaveT);treatSaveT=setTimeout(()=>{saveConfig();},400);}
+function scheduleTreatSave(){clearTimeout(treatSaveT);treatSaveT=setTimeout(()=>{saveConfig();buildTreatList();syncTreat();},400);}
 function renderTreatEditor(){
   const wrap=document.getElementById("treat-editor"); if(!wrap)return; wrap.innerHTML="";
   if(!CFG.treatments.length){wrap.innerHTML='<p class="hint" style="margin:0 0 10px">Aucun traitement pour le moment.</p>';}
@@ -1158,8 +1164,8 @@ function renderTreatEditor(){
       <button class="te-del" type="button">Retirer ce traitement</button>`;
     wrap.appendChild(card);
     const upd=(field,val)=>{const tt=CFG.treatments.find(x=>x.id===t.id);if(tt){tt[field]=val;scheduleTreatSave();}};
-    card.querySelector(".te-name").addEventListener("input",e=>{upd("name",e.target.value);buildTreatList();syncTreat();});
-    card.querySelector(".te-dose").addEventListener("input",e=>{upd("dosage",e.target.value);buildTreatList();syncTreat();});
+    card.querySelector(".te-name").addEventListener("input",e=>upd("name",e.target.value));
+    card.querySelector(".te-dose").addEventListener("input",e=>upd("dosage",e.target.value));
     card.querySelector(".te-start").addEventListener("change",e=>upd("start",e.target.value));
     card.querySelector(".te-end").addEventListener("change",e=>upd("end",e.target.value));
     card.querySelector(".te-eff").addEventListener("change",e=>upd("eff",e.target.value));
@@ -1218,7 +1224,7 @@ function renderQuestions(){
   el.innerHTML="";
   CFG.questions.forEach(q=>{const row=document.createElement("div");row.className="q-item";row.innerHTML=`<span>${q.text}</span><button class="rm" aria-label="Retirer">×</button>`;row.querySelector(".rm").onclick=async()=>{CFG.questions=CFG.questions.filter(x=>x.id!==q.id);await saveConfig();renderQuestions();};el.appendChild(row);});
 }
-async function addQuestion(text){text=(text||"").trim();if(!text)return;CFG.questions.push({id:newKey("q"),text});await saveConfig();renderQuestions();}
+async function addQuestion(text){text=cleanText(text,140);if(!text)return;CFG.questions.push({id:newKey("q"),text});await saveConfig();renderQuestions();}
 
 /* ===== Rendez-vous ===== */
 function apptDaysLeft(){if(!CFG.appointment)return null;return Math.ceil((parseYmd(CFG.appointment)-parseYmd(todayStr()))/864e5);}
@@ -1243,29 +1249,82 @@ function renderApptArea(){
 
 /* ===== Modal intensité (schéma) ===== */
 let modalKey=null, modalTypes=[];
-function paintTypePills(container,selected){
+function paintTypePills(container,selected,editable){
   if(!container)return;container.innerHTML="";
   const list=CFG.ptypes||[];
-  if(!list.length){container.innerHTML='<span style="font-size:12.5px;color:var(--ink-faint)">Aucun type configuré (réglages).</span>';return;}
-  list.forEach(k=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=labelOf(k);b.classList.toggle("on",selected.includes(k));b.onclick=()=>{const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);else selected.push(k);b.classList.toggle("on",selected.includes(k));};container.appendChild(b);});
+  list.forEach(k=>{
+    const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=labelOf(k);b.classList.toggle("on",selected.includes(k));
+    b.onclick=()=>{ if(b._lp){b._lp=false;return;} const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);else selected.push(k);b.classList.toggle("on",selected.includes(k)); };
+    if(editable){
+      let lt=null;
+      b.addEventListener("pointerdown",()=>{lt=setTimeout(async()=>{b._lp=true; if(window.confirm("Retirer le type « "+labelOf(k)+" » de la liste  ?")){const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);await removeSymptom("ptypes",k);paintTypePills(container,selected,true);}},600);});
+      const cx=()=>{if(lt){clearTimeout(lt);lt=null;}};
+      b.addEventListener("pointerup",cx);b.addEventListener("pointermove",cx);b.addEventListener("pointerleave",cx);b.addEventListener("pointercancel",cx);
+    }
+    container.appendChild(b);
+  });
+  if(editable){
+    const add=document.createElement("button");add.type="button";add.className="chip chip-add";add.textContent="＋ Type";
+    add.onclick=async()=>{const lbl=cleanText(window.prompt("Nouveau type de douleur (ex. tiraillement, brûlure…)"),40);if(!lbl)return;const nk=newKey("t");CFG.labels[nk]=lbl;CFG.ptypes.push(nk);await saveConfig();if(typeof renderSettings==="function")renderSettings();selected.push(nk);paintTypePills(container,selected,true);};
+    container.appendChild(add);
+    const hint=document.createElement("div");hint.style.cssText="font-size:10.5px;color:var(--ink-faint);margin-top:6px;width:100%;";hint.textContent="Touchez pour (dé)sélectionner · appui long pour retirer un type";container.appendChild(hint);
+  }else if(!list.length){container.innerHTML='<span style="font-size:12.5px;color:var(--ink-faint)">Aucun type configuré (réglages).</span>';}
+}
+let modalMirror=null;
+function mirrorKey(k){ if(/_d$/.test(k))return k.replace(/_d$/,"_g"); if(/_g$/.test(k))return k.replace(/_g$/,"_d"); return null; }
+function normLabel(s){ return (s||"").toLowerCase().replace(/[()[\]{}.,;:/\\|·•\u00A0\s-]+/g," ").replace(/\s+/g," ").trim(); }
+const SIDE_L=["gauche","gauches","gche","gau","ga","g","left","l"];
+const SIDE_R=["droite","droites","droit","droits","dte","dr","d","right","r"];
+function sideOf(label){
+  const toks=normLabel(label).split(" ").filter(Boolean);
+  for(let i=0;i<toks.length;i++){
+    if(SIDE_L.includes(toks[i]))return {side:"L",base:toks.slice(0,i).concat(toks.slice(i+1)).join(" ")};
+    if(SIDE_R.includes(toks[i]))return {side:"R",base:toks.slice(0,i).concat(toks.slice(i+1)).join(" ")};
+  }
+  return {side:null,base:toks.join(" ")};
+}
+function mirrorValid(k){
+  const m=mirrorKey(k);
+  if(m&&(BODY_ZONES[m]||(CFG.pains||[]).includes(m)))return m;
+  const z=(CFG.customZones||[]).find(z=>z.id===k);
+  if(z){
+    const sa=sideOf(CFG.labels[k]||z.label||"");
+    if(sa.side){
+      const want=sa.side==="L"?"R":"L";
+      const o=(CFG.customZones||[]).find(o=>{ if(o.id===k)return false; const sb=sideOf(CFG.labels[o.id]||o.label); return sb.side===want&&sb.base===sa.base; });
+      if(o)return o.id;
+    }
+  }
+  return null;
 }
 function openModal(k){
   modalKey=k;
+  modalMirror=mirrorValid(k);
   document.getElementById("modal-title").textContent=labelOf(k);
   const r=document.getElementById("modal-range"),v=document.getElementById("modal-val"),n=document.getElementById("modal-note");
   r.value=entry.pains[k]||0; v.textContent=r.value; v.style.color=intensityColor(+r.value);
   n.value=entry.painNotes[k]||"";
   modalTypes=Array.isArray(entry.painTypes[k])?entry.painTypes[k].slice():[];
-  paintTypePills(document.getElementById("modal-types"),modalTypes);
+  paintTypePills(document.getElementById("modal-types"),modalTypes,true);
+  const bw=document.getElementById("modal-bilat-wrap"),bc=document.getElementById("modal-bilat");
+  if(bw&&bc){ if(modalMirror){ bw.style.display="flex"; bc.checked=false; document.getElementById("modal-bilat-side").textContent=labelOf(modalMirror); } else { bw.style.display="none"; bc.checked=false; } }
   r.oninput=()=>{v.textContent=r.value;v.style.color=intensityColor(+r.value);};
   document.getElementById("modal-bg").classList.add("show");
 }
 function closeModal(){
   const r=document.getElementById("modal-range"),n=document.getElementById("modal-note"),v=+r.value;
-  if(modalKey){if(v>0){entry.pains[modalKey]=v;if(n.value.trim())entry.painNotes[modalKey]=n.value;else delete entry.painNotes[modalKey];if(modalTypes.length)entry.painTypes[modalKey]=modalTypes.slice();else delete entry.painTypes[modalKey];}else{delete entry.pains[modalKey];delete entry.painNotes[modalKey];delete entry.painTypes[modalKey];}}
+  const bc=document.getElementById("modal-bilat");
+  if(modalKey){
+    if(v>0){entry.pains[modalKey]=v;if(n.value.trim())entry.painNotes[modalKey]=n.value;else delete entry.painNotes[modalKey];if(modalTypes.length)entry.painTypes[modalKey]=modalTypes.slice();else delete entry.painTypes[modalKey];}
+    else{delete entry.pains[modalKey];delete entry.painNotes[modalKey];delete entry.painTypes[modalKey];}
+    if(modalMirror&&bc&&bc.checked){
+      if(v>0){entry.pains[modalMirror]=v;if(n.value.trim())entry.painNotes[modalMirror]=n.value;else delete entry.painNotes[modalMirror];if(modalTypes.length)entry.painTypes[modalMirror]=modalTypes.slice();else delete entry.painTypes[modalMirror];}
+      else{delete entry.pains[modalMirror];delete entry.painNotes[modalMirror];delete entry.painTypes[modalMirror];}
+    }
+  }
   document.getElementById("modal-bg").classList.remove("show");
   paintBodyMap();refreshPainValues();
-  modalKey=null;
+  modalKey=null;modalMirror=null;
 }
 
 /* ===== Navigation date ===== */
@@ -1346,7 +1405,7 @@ function refreshBackup(){
 /* ===== Personnalisation symptômes & traitements ===== */
 function newKey(p){return (p||"c")+"_"+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36);}
 async function addSymptom(cat,label){
-  label=(label||"").trim();if(!label)return;
+  label=cleanText(label,60);if(!label)return;
   if(cat==="treatments"){CFG.treatments.push({id:newKey("t"),name:label});await saveConfig();buildTreatList();syncTreat();renderSettings();return;}
   if(cat==="ptypes"){const k=newKey("t");CFG.labels[k]=label;CFG.ptypes.push(k);await saveConfig();renderSettings();return;}
   const k=newKey();CFG.labels[k]=label;CFG[cat].push(k);await saveConfig();buildForm();syncForm();renderSettings();
