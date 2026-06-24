@@ -1478,8 +1478,15 @@ function renderSuiviSub(){
 
 /* ===== Cycle : dérivation des jours ===== */
 function cycleStarts(){
-  const regDays=Object.keys(DATA).filter(d=>{const e=DATA[d];return e&&(e.regles||e.cycle==="regles");}).sort();
-  const starts=[];regDays.forEach(d=>{const prev=addDays(d,-1);const pe=DATA[prev];const prevReg=pe&&(pe.regles||pe.cycle==="regles");if(!prevReg)starts.push(d);});
+  const GAP=2; // tolérance : un oubli d'1 ou 2 jours au milieu des règles ne coupe pas le cycle
+  const isReg=d=>{const e=DATA[d];return !!(e&&(e.regles||e.cycle==="regles"));};
+  const regDays=Object.keys(DATA).filter(isReg).sort();
+  const starts=[];
+  regDays.forEach(d=>{
+    let recent=false;
+    for(let k=1;k<=GAP;k++){ if(isReg(addDays(d,-k))){recent=true;break;} }
+    if(!recent) starts.push(d);
+  });
   return starts;
 }
 function cycleDayFor(date,starts){
