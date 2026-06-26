@@ -574,6 +574,7 @@
         <div><div class="lbl">Sommeil</div><div class="seg" id="ctx-sommeil"></div></div>
         <div><div class="lbl">Stress</div><div class="seg" id="ctx-stress"></div></div>
         <div><div class="lbl">Activité physique</div><div class="seg" id="ctx-activite"></div></div>
+        <div><div class="lbl">Météo / température</div><div class="seg" id="ctx-meteo"></div></div>
         <div><div class="lbl">Impact sur la journée</div><div class="seg" id="ctx-impact"></div></div>
         <div><div class="lbl">Humeur</div><div class="seg" id="ctx-mood"></div></div>
       </div>
@@ -850,7 +851,7 @@ function loadEntryFor(date){
     entry.meds=Object.assign({},raw.meds||{}); entry.crises=Array.isArray(raw.crises)?JSON.parse(JSON.stringify(raw.crises)):[]; entry.ras=!!raw.ras; entry.note=raw.note||"";
   }
 }
-function entryIsEmpty(e){return Object.keys(e.pains).length===0&&e.dig.length===0&&e.gen.length===0&&(!e.fog||e.fog.length===0)&&(!e.food||e.food.length===0)&&!e.fatigue&&!e.regles&&!e.spotting&&!e.note.trim()&&!e.ctx.sommeil&&!e.ctx.stress&&!e.ctx.activite&&!e.ctx.impact&&!e.ctx.mood&&Object.keys(e.meds).length===0&&(!e.crises||e.crises.length===0);}
+function entryIsEmpty(e){return Object.keys(e.pains).length===0&&e.dig.length===0&&e.gen.length===0&&(!e.fog||e.fog.length===0)&&(!e.food||e.food.length===0)&&!e.fatigue&&!e.regles&&!e.spotting&&!e.note.trim()&&!e.ctx.sommeil&&!e.ctx.stress&&!e.ctx.activite&&!e.ctx.impact&&!e.ctx.mood&&!e.ctx.meteo&&Object.keys(e.meds).length===0&&(!e.crises||e.crises.length===0);}
 
 /* ===== Construction du formulaire ===== */
 function buildForm(){
@@ -862,6 +863,7 @@ function buildForm(){
   buildSeg("ctx-sommeil",[["bien","Bien"],["moyen","Moyen"],["mal","Mauvais"]],()=>entry.ctx.sommeil,k=>{entry.ctx.sommeil=entry.ctx.sommeil===k?"":k;syncCtx();});
   buildSeg("ctx-stress",[["faible","Faible"],["moyen","Moyen"],["eleve","Élevé"]],()=>entry.ctx.stress,k=>{entry.ctx.stress=entry.ctx.stress===k?"":k;syncCtx();});
   buildSeg("ctx-activite",[["repos","Repos"],["legere","Légère"],["intense","Intense"]],()=>entry.ctx.activite,k=>{entry.ctx.activite=entry.ctx.activite===k?"":k;syncCtx();});
+  buildSeg("ctx-meteo",[["chaud","Chaud"],["tempere","Tempéré"],["froid","Froid"]],()=>entry.ctx.meteo,k=>{entry.ctx.meteo=entry.ctx.meteo===k?"":k;syncCtx();});
   buildSeg("ctx-impact",[["normale","Normale"],["ralentie","Ralentie"],["alitee","Très réduite"]],()=>entry.ctx.impact,k=>{entry.ctx.impact=entry.ctx.impact===k?"":k;syncCtx();});
   buildSeg("ctx-mood",[["sereine","Sereine"],["anxieuse","Anxieuse"],["irritable","Irritable"],["triste","Triste"]],()=>entry.ctx.mood,k=>{entry.ctx.mood=entry.ctx.mood===k?"":k;syncCtx();});
   buildTreatList();
@@ -1134,6 +1136,7 @@ function syncCtx(){
   document.querySelectorAll("#ctx-sommeil .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.sommeil));
   document.querySelectorAll("#ctx-stress .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.stress));
   document.querySelectorAll("#ctx-activite .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.activite));
+  document.querySelectorAll("#ctx-meteo .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.meteo));
   document.querySelectorAll("#ctx-impact .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.impact));
   document.querySelectorAll("#ctx-mood .chip").forEach(b=>b.classList.toggle("on",b.dataset.k===entry.ctx.mood));
 }
@@ -1548,7 +1551,7 @@ function aggregate(days,offset){
   const freq={},isum={},icnt={},painKeys=new Set(),phasePain={},phaseCnt={},cycleDayPain={},cycleDayCnt={},reliefStat={},typeFreq={},typeByPain={},medStat={};
   const starts=cycleStarts();
   let activeDays=0,painDays=0,periodDays=0,spottingDays=0,loggedDays=0,sumMax=0,maxCnt=0,crisisCount=0,crisisDays=0;
-  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0;
+  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0;
   dates.forEach(ds=>{const e=DATA[ds];let any=false;if(e){loggedDays++;
     const pk=Object.keys(e.pains||{});
     pk.forEach(k=>{const v=e.pains[k];freq[k]=(freq[k]||0)+1;isum[k]=(isum[k]||0)+v;icnt[k]=(icnt[k]||0)+1;painKeys.add(k);any=true;});
@@ -1573,9 +1576,10 @@ function aggregate(days,offset){
     if(ph){phasePain[ph]=(phasePain[ph]||0)+mx;phaseCnt[ph]=(phaseCnt[ph]||0)+1;}
     if(cd!==null){cycleDayPain[cd]=(cycleDayPain[cd]||0)+mx;cycleDayCnt[cd]=(cycleDayCnt[cd]||0)+1;}
     if(e.ctx&&e.ctx.sommeil==="mal"){badSleepDays++;if(mx>=6)badSleepPain++;}
+    if(e.ctx&&e.ctx.meteo){meteoFreq[e.ctx.meteo]=(meteoFreq[e.ctx.meteo]||0)+1;if(e.ctx.meteo==="chaud"){hotSum+=mx;hotCnt++;}else{coolSum+=mx;coolCnt++;}}
     if(any)activeDays++;
   }});
-  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,crisisCount,crisisDays,total:dates.length};
+  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,crisisCount,crisisDays,total:dates.length};
 }
 const topFreq=(A,n)=>Object.entries(A.freq).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
@@ -1750,6 +1754,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const treatSec=(treatTable||reliefLine)?`<section class="rp-sec"><h3>Traitements</h3>${treatTable?'<p class="rp-cap">Dosage, période, efficacité ressentie et effets secondaires.</p>'+treatTable:""}${reliefLine?`<p class="rp-cap" style="margin-top:14px">Sur les prises notées durant la période :</p>${reliefLine}`:""}</section>`:"";
   // sommeil
   const sleepSec=A.badSleepDays>=4?`<section class="rp-sec"><h3>Sommeil & douleur</h3><p class="rp-prose">Sur ${A.badSleepDays} nuit(s) de mauvais sommeil, ${A.badSleepPain} ont coïncidé avec une douleur forte (≥ 6/10).</p></section>`:"";
+  const meteoSec=(A.hotCnt>=3&&A.coolCnt>=3)?`<section class="rp-sec"><h3>Chaleur &amp; douleur</h3><p class="rp-prose">Les jours de <b>forte chaleur</b>, douleur moyenne <b>${(A.hotSum/A.hotCnt).toFixed(1).replace(".",",")}/10</b>, contre <b>${(A.coolSum/A.coolCnt).toFixed(1).replace(".",",")}/10</b> les jours tempérés ou froids.</p></section>`:"";
   // comparaison
   const cmpRows=`<div class="cmp">
     <div class="cmp-row"><span>Jours de douleur</span><span class="cmp-val">${A.painDays} ${trendBadge(A.painDays,P.painDays,true)}</span></div>
@@ -1797,6 +1802,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   {const fr=foodInsights(A.dates).filter(r=>r.diff>=1&&r.woAvg!=null&&r.cnt>=3);const fnr=foodNextDayInsights(A.dates).filter(r=>r.diff>=1&&r.woAvg!=null&&r.cnt>=3);let best=null,kind="";fr.forEach(r=>{if(!best||r.diff>best.diff){best=r;kind="le jour même";}});fnr.forEach(r=>{if(!best||r.diff>best.diff){best=r;kind="le lendemain";}});if(best)synth.push(`Piste alimentaire à confirmer — ${kind}, les jours avec <b>${esc(labelOf(best.k).toLowerCase())}</b> : douleur ${f1(best.withAvg)} vs ${f1(best.woAvg)}/10.`);}
   (CFG.treatments||[]).filter(t=>t&&(t.name||"").trim()).forEach(t=>{const ts=treatStats(t,A.dates);if(ts.resp&&Math.abs(ts.resp.after-ts.resp.before)>=1)synth.push(`Depuis « ${esc(t.name)} » : douleur moy. ${f1(ts.resp.before)} → <b>${f1(ts.resp.after)}/10</b> (mois avant → mois après le début).`);});
   {const ti=Object.values(A.impactFreq||{}).reduce((s,x)=>s+x,0);if(ti>=3){const red=(A.impactFreq.ralentie||0)+(A.impactFreq.alitee||0);if(red)synth.push(`Retentissement : <b>${red}/${ti}</b> journées renseignées ralenties ou très réduites.`);}}
+  {if(A.hotCnt>=3&&A.coolCnt>=3){const h=A.hotSum/A.hotCnt,c=A.coolSum/A.coolCnt;if(h-c>=1)synth.push(`Chaleur : douleur plus forte les jours de forte chaleur (<b>${h.toFixed(1).replace(".",",")}/10</b> vs ${c.toFixed(1).replace(".",",")}/10).`);}}
   const synthSec=synth.length?`<section class="rp-sec rp-synth"><h3>À retenir</h3><ul class="rp-keys">${synth.map(s=>`<li>${s}</li>`).join("")}</ul><p class="rp-cap" style="margin-top:8px">Synthèse indicative issue des saisies — à interpréter avec un professionnel, jamais comme un diagnostic.</p></section>`:"";
   return `<div class="report">
     <h2>Récapitulatif des symptômes</h2>
@@ -1817,6 +1823,7 @@ function buildReportHtml(days,forPrint,metaExtra){
     ${cyclicSec}
     ${treatSec}
     ${sleepSec}
+    ${meteoSec}
     ${cmpSec}
     ${(forPrint&&CFG.questions.length)?`<section class="rp-sec"><h3>Questions pour le médecin</h3><ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">${CFG.questions.map(q=>`<li>${q.text}</li>`).join("")}</ul></section>`:""}
     </div>`;
