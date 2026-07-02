@@ -208,6 +208,9 @@
   textarea:focus,.txt:focus{outline:2px solid var(--aubergine);border-color:transparent;}
 
   .danger-link{display:block;text-align:center;background:none;border:none;color:var(--ink-faint);font-size:12.5px;text-decoration:underline;cursor:pointer;margin:2px auto 8px;}
+  .app-about{text-align:center;color:var(--ink-faint);font-size:12px;margin:14px 0 6px;}
+  .wn-list{margin:12px 0 4px;padding-left:20px;}
+  .wn-list li{margin:9px 0;font-size:14.5px;line-height:1.5;color:var(--ink);}
 
   .save-bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(transparent,var(--paper) 28%);padding:14px 18px calc(18px + env(safe-area-inset-bottom));z-index:15;}
   .save-bar .inner{max-width:680px;margin:0 auto;display:flex;gap:10px;align-items:center;}
@@ -643,6 +646,7 @@
       </div>
       <div class="doc-actions">
         <button class="btn btn-primary" id="print-btn">Imprimer / PDF</button>
+        <button class="btn btn-ghost" id="share-recap-btn">Partager</button>
         <button class="btn btn-ghost" id="copy-btn">Copier le texte</button>
       </div>
       <div id="doc-body"></div>
@@ -676,6 +680,7 @@
       <h2 style="font-size:18px;margin-bottom:10px">Apparence</h2>
       <div class="seg" id="theme-seg"></div>
       <div style="margin-top:14px"><div class="lbl">Taille du texte</div><div class="seg" id="bigtext-seg"></div></div>
+      <div style="margin-top:14px"><div class="lbl">Retour haptique (légère vibration)</div><div class="seg" id="haptic-seg"></div></div>
     </div>
 
     <div class="card">
@@ -705,6 +710,8 @@
       <h2 style="font-size:18px;margin-bottom:10px">Code de verrouillage</h2>
       <p class="sec-note">Protège l'ouverture par un code à 4 chiffres (sécurité légère).</p>
       <div id="pin-area"></div>
+      <button class="danger-link" id="report-issue">Signaler un problème</button>
+      <p class="app-about" id="app-about"></p>
     </div>
 
     <button class="btn btn-ghost" id="settings-done" style="width:100%">Terminé</button>
@@ -796,6 +803,14 @@
   </div>
 </div>
 
+<div class="modal-bg" id="wn-bg">
+  <div class="modal">
+    <h3>Quoi de neuf</h3>
+    <ul class="wn-list" id="wn-list"></ul>
+    <div class="mbtns"><button class="btn btn-primary" id="wn-ok">Continuer</button></div>
+  </div>
+</div>
+
 <div class="snack" id="snack"><span id="snack-msg"></span><button id="snack-action">Annuler</button></div>
 
 <script>
@@ -814,7 +829,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;
+const SCHEMA=9;const APP_VERSION="51";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -853,6 +868,7 @@ function migrate(){
   if(CFG.driveFileId===undefined){CFG.driveFileId="";changed=true;}
   if(CFG.driveLastBackup===undefined){CFG.driveLastBackup="";changed=true;}
   if(CFG.bigText===undefined){CFG.bigText=false;changed=true;}
+  if(CFG.haptics===undefined){CFG.haptics=true;changed=true;}
   if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
   if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -973,6 +989,7 @@ async function placeZone(fig,x,y){
 async function deleteZone(id){
   const z=(CFG.customZones||[]).find(z=>z.id===id);if(!z)return;
   if(!window.confirm("Supprimer la zone « "+(CFG.labels[id]||"cette zone")+" » ? Les douleurs déjà enregistrées resteront dans l'historique."))return;
+  buzz(18);
   CFG.customZones=CFG.customZones.filter(z=>z.id!==id);
   CFG.pains=CFG.pains.filter(k=>k!==id);
   await saveConfig();
@@ -1444,7 +1461,7 @@ async function saveCurrent(silent){
   const ok=await saveData();
   document.getElementById("delete-day").style.display=DATA[curDate]?"block":"none";
   if(!ok&&!silent){alert("L'enregistrement a échoué : le stockage de l'appareil semble plein ou indisponible. Par sécurité, exportez vos données (Réglages → Exporter), libérez de l'espace, puis réessayez.");return;}
-  if(!silent){const f=document.getElementById("saved-flash");f.classList.add("show");setTimeout(()=>f.classList.remove("show"),1600);}
+  if(!silent){buzz(12);const f=document.getElementById("saved-flash");f.classList.add("show");setTimeout(()=>f.classList.remove("show"),1600);}
   refreshReminder();scheduleDriveBackup();
 }
 async function deleteDay(){
@@ -1457,10 +1474,12 @@ async function deleteDay(){
 
 /* ===== Snackbar / toast ===== */
 let snackTimer=null;
-function showSnack(msg,onUndo){
+/* Retour haptique discret (Android) — silencieux si non supporté */
+function buzz(ms){if(CFG.haptics===false)return;try{if(navigator.vibrate)navigator.vibrate(ms);}catch(e){}}
+function showSnack(msg,onUndo,label){
   const s=document.getElementById("snack");document.getElementById("snack-msg").textContent=msg;
-  const a=document.getElementById("snack-action");a.style.display="inline";a.onclick=()=>{hideSnack();onUndo&&onUndo();};
-  s.classList.add("show");clearTimeout(snackTimer);snackTimer=setTimeout(hideSnack,6000);
+  const a=document.getElementById("snack-action");a.textContent=label||"Annuler";a.style.display="inline";a.onclick=()=>{hideSnack();onUndo&&onUndo();};
+  s.classList.add("show");clearTimeout(snackTimer);snackTimer=setTimeout(hideSnack,label?10000:6000);
 }
 function toast(msg){const s=document.getElementById("snack");document.getElementById("snack-msg").textContent=msg;document.getElementById("snack-action").style.display="none";s.classList.add("show");clearTimeout(snackTimer);snackTimer=setTimeout(hideSnack,2600);}
 function hideSnack(){document.getElementById("snack").classList.remove("show");}
@@ -1488,6 +1507,7 @@ async function addSymptom(cat,label){
   const k=newKey();CFG.labels[k]=label;CFG[cat].push(k);await saveConfig();buildForm();syncForm();renderSettings();
 }
 async function removeSymptom(cat,k){
+  buzz(12);
   if(cat==="treatments"){CFG.treatments=CFG.treatments.filter(t=>t.id!==k);await saveConfig();buildTreatList();syncTreat();renderSettings();return;}
   if(cat==="ptypes"){CFG.ptypes=CFG.ptypes.filter(x=>x!==k);await saveConfig();renderSettings();return;}
   CFG[cat]=CFG[cat].filter(x=>x!==k);
@@ -1517,6 +1537,9 @@ function renderTheme(){
   const bt=document.getElementById("bigtext-seg");
   if(bt){bt.innerHTML=[["off","Normal"],["on","Grand"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
     bt.querySelectorAll(".chip").forEach(b=>{b.classList.toggle("on",b.dataset.k===(CFG.bigText?"on":"off"));b.onclick=async()=>{CFG.bigText=b.dataset.k==="on";await saveConfig();applyBigText();renderTheme();};});}
+  const hp=document.getElementById("haptic-seg");
+  if(hp){hp.innerHTML=[["on","Activé"],["off","Désactivé"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
+    hp.querySelectorAll(".chip").forEach(b=>{b.classList.toggle("on",b.dataset.k===(CFG.haptics!==false?"on":"off"));b.onclick=async()=>{CFG.haptics=b.dataset.k==="on";await saveConfig();renderTheme();if(CFG.haptics)buzz(12);};});}
 }
 function applyBigText(){document.documentElement.classList.toggle("bigtext",!!CFG.bigText);}
 function renderPin(){
@@ -2123,7 +2146,18 @@ function renderDrive(){
 /* ===== PWA : stockage persistant + service worker ===== */
 function installManifest(){
   if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{});}
-  if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      reg.addEventListener("updatefound",()=>{
+        const nw=reg.installing;if(!nw)return;
+        nw.addEventListener("statechange",()=>{
+          if(nw.state==="installed"&&navigator.serviceWorker.controller){
+            showSnack("Une nouvelle version de Swanne. est prête",()=>location.reload(),"Recharger");
+          }
+        });
+      });
+    }).catch(()=>{});
+  }
 }
 
 /* ===== Lock ===== */
@@ -2165,6 +2199,31 @@ function toggleCard(card,key){
   card.classList.toggle("collapsed",collapsed);
   CFG.cards=CFG.cards||{};CFG.cards[key]=collapsed;saveConfig();
 }
+/* ===== Quoi de neuf (affiché une fois par version) ===== */
+const WHATSNEW=[
+ "Partagez votre récapitulatif avec votre médecin en deux gestes — bouton « Partager » dans Mon suivi → Récapitulatif.",
+ "Un bouton « Signaler un problème » dans les Réglages, pour nous écrire facilement.",
+ "Sauvegarde renforcée : vos saisies sont conservées même si vous changez de jour sans appuyer sur Enregistrer.",
+ "L'application vous prévient désormais quand une mise à jour est prête."
+];
+function maybeShowWhatsNew(){
+  if(!CFG.onboarded){CFG.lastSeenVersion=APP_VERSION;return;}
+  if(CFG.lastSeenVersion===APP_VERSION)return;
+  CFG.lastSeenVersion=APP_VERSION;saveConfig();
+  const ul=document.getElementById("wn-list");ul.innerHTML="";
+  WHATSNEW.forEach(t=>{const li=document.createElement("li");li.textContent=t;ul.appendChild(li);});
+  document.getElementById("wn-bg").classList.add("show");
+}
+async function shareRecap(){
+  const sel=docSelection();
+  const text=reportPlainText(sel.days,sel.meta);
+  if(navigator.share){
+    try{await navigator.share({title:"Récapitulatif Swanne.",text});}catch(e){/* annulé par l'utilisatrice */}
+  }else{
+    try{await navigator.clipboard.writeText(text);toast("Récapitulatif copié — collez-le dans un e-mail ou un message.");}
+    catch(e){toast("Partage indisponible sur cet appareil.");}
+  }
+}
 async function init(){
   await loadConfig();applyTheme();applyBigText();
   if(window.matchMedia){window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if(CFG.theme==="auto")applyTheme();});}
@@ -2173,6 +2232,15 @@ async function init(){
   buildForm();setDate(todayStr());setupCards();
   refreshReminder();refreshBackup();
   if(!CFG.onboarded)showWelcome();
+  maybeShowWhatsNew();
+  document.getElementById("wn-ok").onclick=()=>document.getElementById("wn-bg").classList.remove("show");
+  document.getElementById("wn-bg").onclick=e=>{if(e.target.id==="wn-bg")document.getElementById("wn-bg").classList.remove("show");};
+  document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil";
+  document.getElementById("report-issue").onclick=()=>{
+    const body=encodeURIComponent("Bonjour,\n\nJe rencontre un problème avec Swanne. :\n\n(décrivez le problème ici — n'hésitez pas à joindre une capture d'écran)\n\n—\nVersion : v"+APP_VERSION+"\nAppareil : "+navigator.userAgent);
+    location.href="mailto:sfappli.contact@gmail.com?subject="+encodeURIComponent("Swanne. v"+APP_VERSION+" — signalement")+"&body="+body;
+  };
+  document.getElementById("share-recap-btn").onclick=shareRecap;
   document.getElementById("wc-start").onclick=finishWelcome;
   document.getElementById("wc-name").addEventListener("keydown",e=>{if(e.key==="Enter")finishWelcome();});
 
