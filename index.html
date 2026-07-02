@@ -711,6 +711,7 @@
       <p class="sec-note">Protège l'ouverture par un code à 4 chiffres (sécurité légère).</p>
       <div id="pin-area"></div>
       <button class="danger-link" id="report-issue">Signaler un problème</button>
+      <button class="danger-link" id="show-wn">Voir les nouveautés de cette version</button>
       <p class="app-about" id="app-about"></p>
     </div>
 
@@ -829,7 +830,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="51";
+const SCHEMA=9;const APP_VERSION="52";let BOOT_T=Date.now();
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -2152,7 +2153,7 @@ function installManifest(){
         const nw=reg.installing;if(!nw)return;
         nw.addEventListener("statechange",()=>{
           if(nw.state==="installed"&&navigator.serviceWorker.controller){
-            showSnack("Une nouvelle version de Swanne. est prête",()=>location.reload(),"Recharger");
+            notifyUpdateReady();
           }
         });
       });
@@ -2206,13 +2207,23 @@ const WHATSNEW=[
  "Sauvegarde renforcée : vos saisies sont conservées même si vous changez de jour sans appuyer sur Enregistrer.",
  "L'application vous prévient désormais quand une mise à jour est prête."
 ];
+function openWhatsNew(){
+  const ul=document.getElementById("wn-list");ul.innerHTML="";
+  WHATSNEW.forEach(t=>{const li=document.createElement("li");li.textContent=t;ul.appendChild(li);});
+  document.getElementById("wn-bg").classList.add("show");
+}
 function maybeShowWhatsNew(){
   if(!CFG.onboarded){CFG.lastSeenVersion=APP_VERSION;return;}
   if(CFG.lastSeenVersion===APP_VERSION)return;
   CFG.lastSeenVersion=APP_VERSION;saveConfig();
-  const ul=document.getElementById("wn-list");ul.innerHTML="";
-  WHATSNEW.forEach(t=>{const li=document.createElement("li");li.textContent=t;ul.appendChild(li);});
-  document.getElementById("wn-bg").classList.add("show");
+  openWhatsNew();
+}
+/* Toast MAJ : uniquement si une nouvelle version arrive PENDANT l'utilisation.
+   Dans la minute qui suit l'ouverture, la page vient déjà du réseau (donc à jour) :
+   l'installation du service worker en arrière-plan ne doit pas déclencher de toast. */
+function notifyUpdateReady(){
+  if(Date.now()-BOOT_T<60000)return;
+  showSnack("Une nouvelle version de Swanne. est prête",()=>location.reload(),"Recharger");
 }
 async function shareRecap(){
   const sel=docSelection();
@@ -2241,6 +2252,7 @@ async function init(){
     location.href="mailto:sfappli.contact@gmail.com?subject="+encodeURIComponent("Swanne. v"+APP_VERSION+" — signalement")+"&body="+body;
   };
   document.getElementById("share-recap-btn").onclick=shareRecap;
+  document.getElementById("show-wn").onclick=openWhatsNew;
   document.getElementById("wc-start").onclick=finishWelcome;
   document.getElementById("wc-name").addEventListener("keydown",e=>{if(e.key==="Enter")finishWelcome();});
 
