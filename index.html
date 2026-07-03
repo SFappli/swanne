@@ -710,8 +710,10 @@
       <h2 style="font-size:18px;margin-bottom:10px">Code de verrouillage</h2>
       <p class="sec-note">Protège l'ouverture par un code à 4 chiffres (sécurité légère).</p>
       <div id="pin-area"></div>
+      <a class="danger-link" href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a>
       <button class="danger-link" id="report-issue">Signaler un problème</button>
       <button class="danger-link" id="show-wn">Voir les nouveautés de cette version</button>
+      <button class="danger-link" id="wipe-all" style="color:var(--rose)">Effacer toutes mes données</button>
       <p class="app-about" id="app-about"></p>
     </div>
 
@@ -830,7 +832,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="53";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="54";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -1455,6 +1457,21 @@ function autoStash(){
   if(stableStr(rec)!==stableStr(DATA[curDate]||null)){
     DATA[curDate]=rec;saveData();refreshReminder();scheduleDriveBackup();
   }
+}
+function reloadApp(){location.reload();}
+/* Effacement total — honore le droit à l'effacement annoncé dans la politique.
+   Double confirmation + rappel d'export. Ne touche pas à la sauvegarde Drive
+   (compte personnel de l'utilisatrice), mais le rappelle explicitement. */
+async function wipeAll(){
+  const c1=window.confirm("Effacer TOUTES vos données de cet appareil ?\n\nToutes vos journées, zones, traitements et réglages seront définitivement supprimés. Cette action est irréversible.\n\nConseil : exportez d'abord vos données (Réglages → Exporter) si vous voulez pouvoir les retrouver.");
+  if(!c1)return;
+  const c2=window.confirm("Dernière confirmation.\n\nAprès l'effacement, l'application redémarrera comme au premier jour. Si vous aviez activé la sauvegarde Google Drive, pensez aussi à supprimer le fichier « swanne-backup » dans votre Drive.\n\nEffacer définitivement ?");
+  if(!c2)return;
+  DATA={};
+  await rawSet(STORE_KEY,"");
+  await rawSet(CONFIG_KEY,"");
+  buzz(20);
+  reloadApp();
 }
 async function saveCurrent(silent){
   if(entryIsEmpty(entry)&&!entry.ras) delete DATA[curDate];
@@ -2223,10 +2240,10 @@ function toggleCard(card,key){
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
 const WHATSNEW=[
  "Partagez votre récapitulatif avec votre médecin en deux gestes — bouton « Partager » dans Mon suivi.",
- "Nouveau dans Tendances : l'historique par zone, pour suivre une localisation précise dans le temps.",
- "Le récapitulatif croise désormais aussi stress et douleur.",
+ "Nouveau dans Tendances : l'historique par zone, et le croisement stress ↔ douleur dans le récapitulatif.",
  "Lisibilité renforcée (contrastes) et confort tactile amélioré.",
- "Sauvegarde renforcée, bouton « Signaler un problème », et réglage du retour haptique."
+ "Dans les Réglages : politique de confidentialité, effacement complet de vos données, signalement de problème.",
+ "Sauvegarde renforcée : vos saisies sont conservées même sans appuyer sur Enregistrer."
 ];
 function openWhatsNew(){
   const ul=document.getElementById("wn-list");ul.innerHTML="";
@@ -2274,6 +2291,7 @@ async function init(){
   };
   document.getElementById("share-recap-btn").onclick=shareRecap;
   document.getElementById("show-wn").onclick=openWhatsNew;
+  document.getElementById("wipe-all").onclick=wipeAll;
   document.getElementById("wc-start").onclick=finishWelcome;
   document.getElementById("wc-name").addEventListener("keydown",e=>{if(e.key==="Enter")finishWelcome();});
 
