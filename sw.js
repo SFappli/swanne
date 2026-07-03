@@ -1,5 +1,5 @@
 /* Service worker Swanne. — cache hors-ligne + mises à jour automatiques */
-const CACHE = "swanne-v59";
+const CACHE = "swanne-v60";
 const ASSETS = ["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
 
 self.addEventListener("install", e => {
@@ -26,7 +26,7 @@ self.addEventListener("fetch", e => {
     // réseau d'abord (pour récupérer les mises à jour), cache en secours (hors-ligne)
     e.respondWith((async () => {
       try {
-        const net = await fetch(req);
+        const net = await fetch(req, {cache:"no-cache"});
         if (net && net.ok) { (await caches.open(CACHE)).put("./index.html", net.clone()); }
         return net;
       } catch (err) {
@@ -41,7 +41,7 @@ self.addEventListener("fetch", e => {
     const cached = await caches.match(req);
     if (cached) return cached;
     try {
-      const net = await fetch(req);
+      const net = await fetch(req, {cache:"no-cache"});
       if (net && net.ok && (net.type === "basic" || net.type === "default")) {
         (await caches.open(CACHE)).put(req, net.clone());
       }

@@ -150,6 +150,8 @@
   .pain2-name{font-size:15px;font-weight:500;transition:opacity .12s;}
   .pain2.active .pain2-name{opacity:0;}
   .pain2-val{font-family:"Newsreader",serif;font-size:22px;font-weight:600;color:var(--ink-faint);min-width:24px;text-align:right;}
+  .pain2-after{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);margin-top:8px;cursor:pointer;}
+  .pain2-after input{width:18px;height:18px;}
   .pain2-hint{font-size:11px;color:var(--ink-faint);margin-top:3px;}
   .pain2-track{position:absolute;top:9px;left:0;right:42px;height:10px;overflow:visible;border-radius:99px;background:var(--line);opacity:0;pointer-events:none;transition:opacity .12s;}
   .pain2.active .pain2-track{opacity:1;}
@@ -832,7 +834,7 @@ function cssEsc(s){return (typeof CSS!=="undefined"&&CSS.escape)?CSS.escape(s):S
 /* ===== Listes par défaut ===== */
 const DEF_PAINS=[["ovaire_d","Ovaire / bas-ventre droit"],["ovaire_g","Ovaire / bas-ventre gauche"],["pelvienne","Douleur pelvienne (bas-ventre)"],["lombaire","Douleurs lombaires"],["dorsale","Douleurs dorsales / haut du dos"],["fesse_d","Fesse droite"],["fesse_g","Fesse gauche"],["jambe_d","Jambe droite / sciatique"],["jambe_g","Jambe gauche / sciatique"],["rapports","Pendant les rapports"],["defecation","À la défécation"],["urinaire","Douleurs urinaires"],["tete","Maux de tête / migraine"]];
 const DEF_DIG=[["ballonnements","Ballonnements (ventre gonflé)"],["coliques","Coliques / crampes"],["diarrhee","Diarrhée"],["constipation","Constipation"],["nausees","Nausées"],["vomissements","Vomissements"],["defecation","Douleur à la défécation"],["sang_selles","Sang dans les selles"]];
-const DEF_GEN=[["courbatures","Courbatures"],["febrile","Sensation fébrile"],["sommeil","Troubles du sommeil"],["vertiges","Vertiges"],["humeur","Humeur basse / anxiété"],["saign_anormaux","Saignements inhabituels"],["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"],["dyspareunie","Douleurs pendant / après les rapports"]];
+const DEF_GEN=[["courbatures","Courbatures"],["febrile","Sensation fébrile"],["sommeil","Troubles du sommeil"],["vertiges","Vertiges"],["humeur","Humeur basse / anxiété"],["saign_anormaux","Saignements inhabituels"],["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"]];
 const DEF_FOG=[["concentration","Concentration difficile"],["oublis","Oublis"],["confusion","Confusion"],["ralenti","Sensation d'être ralenti·e"],["mots","Manque du mot"]];
 const DEF_FOOD=[["gras","Repas gras"],["sucre","Sucre / sucreries"],["alcool","Alcool"],["cafe","Café"],["gluten","Gluten"],["laitages","Produits laitiers"],["epice","Épicé"],["transforme","Ultra-transformé"]];
 const DEF_PTYPES=[["t_crampe","Crampes / spasmes"],["t_brulure","Brûlure"],["t_lancinante","Lancinante / élancements"],["t_poignard","Coup de poignard (aiguë)"],["t_pesanteur","Pesanteur / pression"],["t_decharge","Décharge (type nerf)"],["t_tiraillement","Tiraillement"]];
@@ -841,7 +843,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="59";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="60";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -863,7 +865,7 @@ async function saveData(){return await rawSet(STORE_KEY,JSON.stringify(DATA));}
 async function saveConfig(){return await rawSet(CONFIG_KEY,JSON.stringify(CFG));}
 async function loadConfig(){
   const v=await rawGet(CONFIG_KEY); let c=null; try{c=v?JSON.parse(v):null;}catch(e){c=null;}
-  if(!c){c={pains:DEF_PAINS.map(x=>x[0]),dig:DEF_DIG.map(x=>x[0]),gen:DEF_GEN.map(x=>x[0]),fog:DEF_FOG.map(x=>x[0]),food:DEF_FOOD.map(x=>x[0]),ptypes:DEF_PTYPES.map(x=>x[0]),labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};[...DEF_PAINS,...DEF_DIG,...DEF_GEN,...DEF_FOG,...DEF_FOOD,...DEF_PTYPES].forEach(([k,l])=>c.labels[k]=l);CFG=c;await saveConfig();}
+  if(!c){c={pains:DEF_PAINS.map(x=>x[0]),dig:DEF_DIG.map(x=>x[0]),gen:DEF_GEN.map(x=>x[0]),fog:DEF_FOG.map(x=>x[0]),food:DEF_FOOD.map(x=>x[0]),ptypes:DEF_PTYPES.map(x=>x[0]),labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};[...DEF_PAINS,...DEF_DIG,...DEF_GEN,...DEF_FOG,...DEF_FOOD,...DEF_PTYPES].forEach(([k,l])=>c.labels[k]=l);c.labels.dyspareunie="Après les rapports";CFG=c;await saveConfig();}
   else{c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.labels=c.labels||{};c.treatments=c.treatments||[];c.theme=c.theme||"auto";c.pin=c.pin||"";c.lastBackup=c.lastBackup||"";c.name=c.name||"";CFG=c;migrate();}
   CFG.labels.regles="Règles";CFG.labels.spotting="Spotting";
 }
@@ -883,6 +885,8 @@ function migrate(){
   if(CFG.haptics===undefined){CFG.haptics=true;changed=true;}
   if(CFG.printName===undefined){CFG.printName="";changed=true;}
   if(CFG.birthdate===undefined){CFG.birthdate="";changed=true;}
+  if(CFG.gen&&CFG.gen.includes("dyspareunie")){CFG.gen=CFG.gen.filter(k=>k!=="dyspareunie");changed=true;}
+  if(CFG.labels&&CFG.labels.dyspareunie!=="Après les rapports"){CFG.labels.dyspareunie="Après les rapports";changed=true;}
   if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
   if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -893,7 +897,7 @@ function migrate(){
   // nouveaux symptômes cliniques (ajoutés aux listes existantes sans rien retirer)
   if(CFG.version<8){
     [["dig",[["defecation","Douleur à la défécation"],["sang_selles","Sang dans les selles"]]],
-     ["gen",[["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"],["dyspareunie","Douleurs pendant / après les rapports"]]]
+     ["gen",[["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"]]]
     ].forEach(([cat,items])=>{CFG[cat]=CFG[cat]||[];items.forEach(([k,l])=>{if(!CFG[cat].includes(k))CFG[cat].push(k);if(!CFG.labels[k])CFG.labels[k]=l;});});
     changed=true;
   }
@@ -1090,9 +1094,11 @@ function buildPainList(){
         <div class="pain2-line"><span class="pain2-name">${label}</span><span class="pain2-val" id="val-${k}">—</span></div>
         ${idx===0?'<div class="pain2-hint">Maintenez le point puis glissez vers la droite pour régler la douleur.</div>':''}
         <div class="pain2-track" id="trk-${k}"><div class="pain2-fill" id="fill-${k}"></div><div class="pain2-knob" id="knob-${k}"></div></div>
+        ${k==="rapports"?`<label class="pain2-after"><input type="checkbox" id="chk-apres-rapports"> douleur aussi <b>après</b> le rapport</label>`:""}
       </div>`;
     pl.appendChild(row);
     attachPainControl(row,k);
+    if(k==="rapports"){const cb=row.querySelector("#chk-apres-rapports");if(cb){cb.checked=entry.gen.includes("dyspareunie");cb.onchange=()=>{const i=entry.gen.indexOf("dyspareunie");if(cb.checked&&i<0)entry.gen.push("dyspareunie");if(!cb.checked&&i>=0)entry.gen.splice(i,1);};}}
   });
   refreshPainValues();
 }
