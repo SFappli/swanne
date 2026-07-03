@@ -18,7 +18,7 @@
 <style>
   :root{
     --paper:#E4DEEC;--surface:#F0EBF5;--surface-2:#E7E0EF;
-    --ink:#211C28;--ink-soft:#655D70;--ink-faint:#9B93A7;--line:#D9CFE4;
+    --ink:#211C28;--ink-soft:#655D70;--ink-faint:#817790;--line:#D9CFE4;
     --aubergine:#634A70;--aubergine-deep:#43314F;--rose:#BE6A7C;--sage:#7C9F7B;
     --on-accent:#FFFFFF;
     --radius:20px;--shadow:0 1px 2px rgba(33,28,40,.025), 0 8px 22px rgba(33,28,40,.04);
@@ -111,7 +111,7 @@
   @media (prefers-reduced-motion:reduce){.card{transition:none;}.card:hover{transform:none;}}
   .card h2{font-size:19px;}
   .sec-note{font-size:12.5px;color:var(--ink-soft);margin:6px 0 14px;}
-  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);}
 
   .seg-toggle{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:14px;}
   .seg-toggle button{flex:1;border:none;background:none;color:var(--ink-soft);font-weight:500;font-size:13px;padding:7px;border-radius:7px;cursor:pointer;}
@@ -169,7 +169,7 @@
   .pain-note.show{display:block;}
 
   .chips{display:flex;flex-wrap:wrap;gap:8px;}
-  .chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-soft);border-radius:999px;padding:9px 14px;font-size:14px;cursor:pointer;transition:all .14s;user-select:none;min-height:40px;}
+  .chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-soft);border-radius:999px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all .14s;user-select:none;min-height:40px;}
   .chip:hover{border-color:var(--aubergine);}
   .chip.on{background:var(--aubergine);border-color:var(--aubergine);color:var(--on-accent);font-weight:500;}
   .chip.cycle.on{background:var(--rose);border-color:var(--rose);}
@@ -207,7 +207,7 @@
   textarea{resize:vertical;min-height:54px;}
   textarea:focus,.txt:focus{outline:2px solid var(--aubergine);border-color:transparent;}
 
-  .danger-link{display:block;text-align:center;background:none;border:none;color:var(--ink-faint);font-size:12.5px;text-decoration:underline;cursor:pointer;margin:2px auto 8px;}
+  .danger-link{display:block;text-align:center;background:none;border:none;color:var(--ink-soft);font-size:12.5px;text-decoration:underline;cursor:pointer;margin:2px auto 8px;}
   .app-about{text-align:center;color:var(--ink-faint);font-size:12px;margin:14px 0 6px;}
   .wn-list{margin:12px 0 4px;padding-left:20px;}
   .wn-list li{margin:9px 0;font-size:14.5px;line-height:1.5;color:var(--ink);}
@@ -830,7 +830,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="52";let BOOT_T=Date.now();
+const SCHEMA=9;const APP_VERSION="53";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -1650,7 +1650,7 @@ function aggregate(days,offset){
   const freq={},isum={},icnt={},painKeys=new Set(),phasePain={},phaseCnt={},cycleDayPain={},cycleDayCnt={},reliefStat={},typeFreq={},typeByPain={},medStat={};
   const starts=cycleStarts();
   let activeDays=0,painDays=0,periodDays=0,spottingDays=0,loggedDays=0,sumMax=0,maxCnt=0,crisisCount=0,crisisDays=0;
-  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0;
+  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0;
   dates.forEach(ds=>{const e=DATA[ds];let any=false;if(e){loggedDays++;
     const pk=Object.keys(e.pains||{});
     pk.forEach(k=>{const v=e.pains[k];freq[k]=(freq[k]||0)+1;isum[k]=(isum[k]||0)+v;icnt[k]=(icnt[k]||0)+1;painKeys.add(k);any=true;});
@@ -1675,10 +1675,11 @@ function aggregate(days,offset){
     if(ph){phasePain[ph]=(phasePain[ph]||0)+mx;phaseCnt[ph]=(phaseCnt[ph]||0)+1;}
     if(cd!==null){cycleDayPain[cd]=(cycleDayPain[cd]||0)+mx;cycleDayCnt[cd]=(cycleDayCnt[cd]||0)+1;}
     if(e.ctx&&e.ctx.sommeil==="mal"){badSleepDays++;if(mx>=6)badSleepPain++;}
+    if(e.ctx&&e.ctx.stress){if(e.ctx.stress==="eleve"){stressHiSum+=mx;stressHiCnt++;}else{stressLoSum+=mx;stressLoCnt++;}}
     if(e.ctx&&e.ctx.meteo){meteoFreq[e.ctx.meteo]=(meteoFreq[e.ctx.meteo]||0)+1;if(e.ctx.meteo==="chaud"){hotSum+=mx;hotCnt++;}else{coolSum+=mx;coolCnt++;}}
     if(any)activeDays++;
   }});
-  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,crisisCount,crisisDays,total:dates.length};
+  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
 }
 const topFreq=(A,n)=>Object.entries(A.freq).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
@@ -1735,6 +1736,9 @@ function renderTrack(){
   const donutHtml=pe.length?donutBlock(pe.map(([k,v],i)=>({label:labelOf(k),value:v,color:PALETTE[i%PALETTE.length]}))):'<div class="chart-na">Aucune douleur localisée sur la période.</div>';
   const criseStat=A.crisisCount?`<div class="stat"><div class="n">${A.crisisCount}</div><div class="l">crises notées</div></div>`:"";
   const typeEntries=Object.entries(A.typeFreq).sort((a,b)=>b[1]-a[1]);
+  const zones=[...A.painKeys].sort((a,b)=>(A.freq[b]||0)-(A.freq[a]||0));
+  if(!zones.includes(trendZone))trendZone=zones[0]||"";
+  const zoneCard=zones.length?`<div class="card"><h2 style="font-size:18px;margin-bottom:4px">Historique par zone</h2><p class="sec-note" style="margin-bottom:10px">L'évolution d'une localisation précise — utile pour montrer au médecin comment une zone se comporte dans le temps.</p><select id="zone-pick" class="txt" style="margin-bottom:10px">${zones.map(k=>`<option value="${k}"${k===trendZone?" selected":""}>${esc(labelOf(k))}</option>`).join("")}</select><div id="zone-line"></div></div>`:"";
   const typeCard=typeEntries.length?`<div class="card"><h2 style="font-size:18px;margin-bottom:4px">Type de douleur ressenti</h2><p class="sec-note" style="margin-bottom:14px">Nombre de fois où chaque ressenti a été coché sur la période.</p>${barListHtml(typeEntries.map(([k,v],i)=>({label:labelOf(k),value:v,color:PALETTE[(i+3)%PALETTE.length]})))}</div>`:"";
   body.innerHTML=`
     <div class="stat-grid">
@@ -1748,9 +1752,24 @@ function renderTrack(){
     <div class="card"><h2 style="font-size:18px;margin-bottom:10px">Douleur par phase du cycle</h2><p class="sec-note">Douleur moyenne (échelle 0–10) selon la phase. Une douleur surtout menstruelle ou au contraire constante n'oriente pas pareil.</p>${phaseHtml}</div>
     <div class="card"><h2 style="font-size:18px;margin-bottom:4px">Symptômes les plus fréquents</h2><p class="sec-note" style="margin-bottom:14px">En nombre de jours où le symptôme a été noté sur la période.</p>${freqHtml}</div>
     <div class="card"><h2 style="font-size:18px;margin-bottom:4px">Évolution de la douleur</h2><p class="sec-note" style="margin-bottom:6px">Douleur maximale notée chaque jour, sur une échelle de 0 à 10.</p>${lineHtml}</div>
+    ${zoneCard}
     <div class="card"><h2 style="font-size:18px;margin-bottom:4px">Répartition des douleurs</h2><p class="sec-note" style="margin-bottom:14px">Part de chaque localisation, en nombre de jours notés.</p>${donutHtml}</div>
     ${typeCard}`;
   renderCalendar(A,"cal");
+  if(zones.length){
+    const drawZone=()=>{
+      const k=trendZone;
+      const pts=A.dates.map(d=>{const e=DATA[d];return {v:(e&&e.pains&&e.pains[k]!=null)?e.pains[k]:null};});
+      const noted=pts.filter(p=>p.v!=null);
+      const avg=noted.length?(noted.reduce((s,p)=>s+p.v,0)/noted.length):0;
+      document.getElementById("zone-line").innerHTML=
+        `<p class="sec-note" style="margin:0 0 6px">${noted.length} jour(s) noté(s) · moyenne ${avg.toFixed(1).replace(".",",")}/10</p>`+
+        lineSvg(pts,{xStart:shortDate(A.dates[0]),xEnd:shortDate(A.dates[A.dates.length-1])});
+    };
+    const zp=document.getElementById("zone-pick");
+    zp.onchange=()=>{trendZone=zp.value;drawZone();};
+    drawZone();
+  }
 }
 function renderCalendar(A,elId){
   const cal=document.getElementById(elId);if(!cal)return;cal.classList.add("cal");
@@ -1818,6 +1837,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   if(ci.hiFn>=3&&ci.loFn>=3&&ci.hiFavg!=null&&ci.loFavg!=null&&Math.abs(ci.hiFavg-ci.loFavg)>=0.5)
     ins.push(`Les jours de forte fatigue (≥ 7/10), la douleur est en moyenne de <b>${ci.hiFavg.toFixed(1).replace(".",",")}/10</b>, contre <b>${ci.loFavg.toFixed(1).replace(".",",")}/10</b> les autres jours de fatigue notée.`);
   if(ci.hiPainDays>=3&&ci.loPainDays>=3){const hp=Math.round(100*ci.hiPainFog/ci.hiPainDays),lp=Math.round(100*ci.loPainFog/ci.loPainDays);if(Math.abs(hp-lp)>=10)ins.push(`Le brouillard cérébral est noté <b>${hp}%</b> des jours de douleur forte (≥ 6/10), contre <b>${lp}%</b> des jours de douleur plus faible.`);}
+  if(A.stressHiCnt>=3&&A.stressLoCnt>=3){const h=A.stressHiSum/A.stressHiCnt,l=A.stressLoSum/A.stressLoCnt;if(h-l>=1)ins.push(`Les jours de <b>stress élevé</b>, la douleur est en moyenne de <b>${h.toFixed(1).replace(".",",")}/10</b>, contre <b>${l.toFixed(1).replace(".",",")}/10</b> les jours plus calmes.`);}
   const crossSec=ins.length?`<section class="rp-sec"><h3>Observations croisées</h3><p class="rp-cap">Tendances indicatives sur la période, à interpréter avec un professionnel de santé.</p>${ins.map(s=>`<p style="margin:0 0 6px">${s}</p>`).join("")}</section>`:"";
   const foodRows=foodInsights(A.dates);
   const foodTbl=foodRows.length?`<table class="rp-ttable"><thead><tr><th>Aliment</th><th class="num">Jours</th><th>Douleur moy.</th></tr></thead><tbody>${foodRows.map(r=>{const w=r.withAvg.toFixed(1).replace(".",",");const meta=r.woAvg!=null?`<div class="te-meta">sans : ${r.woAvg.toFixed(1).replace(".",",")}/10</div>`:"";return `<tr><td><b>${esc(labelOf(r.k))}</b></td><td class="num">${r.cnt}</td><td class="te-eff">${w}/10${meta}</td></tr>`;}).join("")}</tbody></table>`:"";
@@ -2202,10 +2222,11 @@ function toggleCard(card,key){
 }
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
 const WHATSNEW=[
- "Partagez votre récapitulatif avec votre médecin en deux gestes — bouton « Partager » dans Mon suivi → Récapitulatif.",
- "Un bouton « Signaler un problème » dans les Réglages, pour nous écrire facilement.",
- "Sauvegarde renforcée : vos saisies sont conservées même si vous changez de jour sans appuyer sur Enregistrer.",
- "L'application vous prévient désormais quand une mise à jour est prête."
+ "Partagez votre récapitulatif avec votre médecin en deux gestes — bouton « Partager » dans Mon suivi.",
+ "Nouveau dans Tendances : l'historique par zone, pour suivre une localisation précise dans le temps.",
+ "Le récapitulatif croise désormais aussi stress et douleur.",
+ "Lisibilité renforcée (contrastes) et confort tactile amélioré.",
+ "Sauvegarde renforcée, bouton « Signaler un problème », et réglage du retour haptique."
 ];
 function openWhatsNew(){
   const ul=document.getElementById("wn-list");ul.innerHTML="";
