@@ -713,6 +713,11 @@
     <div class="card">
       <h2 style="font-size:18px;margin-bottom:10px">Code de verrouillage</h2>
       <p class="sec-note">Protège l'ouverture par un code à 4 chiffres (sécurité légère).</p>
+      <div style="margin-top:16px"><div class="lbl">En-tête du récapitulatif imprimé (facultatif)</div>
+        <input id="print-name" class="txt" placeholder="NOM Prénom (format dossier médical)" autocomplete="off" style="margin-bottom:8px">
+        <input id="print-dob" class="txt" type="date" aria-label="Date de naissance (facultative)">
+        <p class="hint" style="margin-top:6px">Ces informations restent sur votre appareil et n'apparaissent que sur le récapitulatif imprimé ou partagé — utile pour que le document soit classé dans votre dossier médical. Laissez vide si vous n'en voulez pas.</p>
+      </div>
       <div id="pin-area"></div>
       <a class="danger-link" href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a>
       <button class="danger-link" id="report-issue">Signaler un problème</button>
@@ -836,7 +841,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="56";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="59";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -876,6 +881,8 @@ function migrate(){
   if(CFG.driveLastBackup===undefined){CFG.driveLastBackup="";changed=true;}
   if(CFG.bigText===undefined){CFG.bigText=false;changed=true;}
   if(CFG.haptics===undefined){CFG.haptics=true;changed=true;}
+  if(CFG.printName===undefined){CFG.printName="";changed=true;}
+  if(CFG.birthdate===undefined){CFG.birthdate="";changed=true;}
   if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
   if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -900,6 +907,7 @@ function migrate(){
 }
 function labelOf(k){return CFG.labels[k]||k;}
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const frDMY=ymd=>{if(!ymd)return"";const p=String(ymd).split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:ymd;};
 function cleanText(s,max){s=(s==null?"":String(s)).replace(/[<>]/g,"").replace(/\s+/g," ").trim();return max?s.slice(0,max):s;}
 function tDate(s){if(!s)return"";const p=String(s).split("-");return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
 function treatPeriod(t){const a=tDate(t.start),b=tDate(t.end);if(a&&b)return `${a} → ${b}`;if(a)return `depuis ${a}`;if(b)return `arrêté le ${b}`;return "";}
@@ -1671,7 +1679,7 @@ function aggregate(days,offset){
   const freq={},isum={},icnt={},painKeys=new Set(),phasePain={},phaseCnt={},cycleDayPain={},cycleDayCnt={},reliefStat={},typeFreq={},typeByPain={},medStat={};
   const starts=cycleStarts();
   let activeDays=0,painDays=0,periodDays=0,spottingDays=0,loggedDays=0,sumMax=0,maxCnt=0,crisisCount=0,crisisDays=0;
-  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0;
+  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,criseISum=0,criseICnt=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0;
   dates.forEach(ds=>{const e=DATA[ds];let any=false;if(e){loggedDays++;
     const pk=Object.keys(e.pains||{});
     pk.forEach(k=>{const v=e.pains[k];freq[k]=(freq[k]||0)+1;isum[k]=(isum[k]||0)+v;icnt[k]=(icnt[k]||0)+1;painKeys.add(k);any=true;});
@@ -1688,7 +1696,7 @@ function aggregate(days,offset){
     if(e.ctx&&e.ctx.impact){impactFreq[e.ctx.impact]=(impactFreq[e.ctx.impact]||0)+1;}
     if(e.ctx&&e.ctx.mood){moodFreq[e.ctx.mood]=(moodFreq[e.ctx.mood]||0)+1;}
     if(e.meds)Object.entries(e.meds).forEach(([id,m])=>{if(m&&m.taken){any=true;if(m.relief){reliefStat[m.relief]=(reliefStat[m.relief]||0)+1;const st=medStat[id]||(medStat[id]={oui:0,peu:0,non:0});st[m.relief]=(st[m.relief]||0)+1;}}});
-    if(e.crises&&e.crises.length){crisisCount+=e.crises.length;crisisDays++;any=true;}
+    if(e.crises&&e.crises.length){crisisCount+=e.crises.length;crisisDays++;any=true;e.crises.forEach(c=>{if(c&&c.intensity){criseISum+=c.intensity;criseICnt++;}});}
     if(pk.length)painDays++;
     const mx=dayMaxPain(e);if(pk.length){sumMax+=mx;maxCnt++;}
     if(isReg){regPainSum+=mx;regPainCnt++;}else{nonRegPainSum+=mx;nonRegPainCnt++;}
@@ -1701,7 +1709,7 @@ function aggregate(days,offset){
     if(e.ctx&&e.ctx.meteo){meteoFreq[e.ctx.meteo]=(meteoFreq[e.ctx.meteo]||0)+1;if(!e.regles){if(e.ctx.meteo==="chaud"){hotSum+=mx;hotCnt++;}else{coolSum+=mx;coolCnt++;}}}
     if(any)activeDays++;
   }});
-  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,sevDays,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
+  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,sevDays,criseISum,criseICnt,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
 }
 const topFreq=(A,n)=>Object.entries(A.freq).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
@@ -1712,7 +1720,7 @@ function barListHtml(items){
   return `<div class="hbars">`+items.map(i=>`<div class="hbar"><span class="hb-l">${i.label}</span><span class="hb-track"><span class="hb-fill" style="width:${Math.round(100*i.value/max)}%;background:${i.color}"></span></span><span class="hb-v">${i.value}</span></div>`).join("")+`</div>`;
 }
 function colsHtml(items){
-  return `<div class="cols">`+items.map(i=>`<div class="col"><div class="col-track"><div class="col-bar" style="height:${Math.round(100*i.value/10)}%;background:${i.color}"></div></div><div class="col-v">${i.value.toFixed(1)}</div><div class="col-l">${i.label}</div></div>`).join("")+`</div>`;
+  return `<div class="cols">`+items.map(i=>`<div class="col"><div class="col-track"><div class="col-bar" style="height:${Math.round(100*i.value/10)}%;background:${i.color}"></div></div><div class="col-v">${i.value.toFixed(1).replace(".",",")}</div><div class="col-l">${i.label}</div></div>`).join("")+`</div>`;
 }
 function lineSvg(series,opts){
   opts=opts||{};
@@ -1766,7 +1774,7 @@ function renderTrack(){
     <div class="stat-grid">
       <div class="stat"><div class="n">${A.activeDays}</div><div class="l">jours avec symptômes</div></div>
       <div class="stat"><div class="n">${A.painDays}</div><div class="l">jours de douleur</div></div>
-      <div class="stat"><div class="n">${A.avgMax?A.avgMax.toFixed(1):"—"}</div><div class="l">douleur moyenne /10</div></div>
+      <div class="stat"><div class="n">${A.avgMax?A.avgMax.toFixed(1).replace(".",","):"—"}</div><div class="l">douleur moyenne /10</div></div>
       ${criseStat}
     </div>
     <div class="card"><h2 style="font-size:18px">Calendrier d'intensité</h2><p class="sec-note">Chaque case = un jour. Couleur = douleur maximale du jour (0 à 10). Le point rose marque les règles.</p><div id="cal"></div>
@@ -1831,17 +1839,17 @@ function buildReportHtml(days,forPrint,metaExtra){
   const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
   // prose synthèse (concise, conditionnelle)
   let prose=`Sur ${A.total} jours, des symptômes ont été notés ${A.activeDays} jour(s), dont <b>${A.painDays}</b> avec une douleur localisée`;
-  prose+=A.avgMax?` (intensité moyenne <b>${A.avgMax.toFixed(1)}/10</b>). `:`. `;
+  prose+=A.avgMax?` (intensité moyenne <b>${f1(A.avgMax)}/10</b>). `:`. `;
   if(A.periodDays||A.spottingDays)prose+=`Saignements : ${A.periodDays} j de règles, ${A.spottingDays} j de spotting. `;
   // (détail des localisations et ressentis : voir le tableau « Douleurs par localisation »)
   // chiffres-clés
   const fig=(n,l)=>`<div class="rp-fig"><span class="n">${n}</span><span class="l">${l}</span></div>`;
-  let figures=fig(A.painDays,"jours de douleur")+fig(A.avgMax?A.avgMax.toFixed(1):"—","douleur moy. /10")+fig(A.sevDays,"jours de douleur forte (≥ 6)");
-  if(A.crisisCount)figures+=fig(A.crisisCount,"crises notées");
+  let figures=fig(A.painDays,"jours de douleur")+fig(A.avgMax?f1(A.avgMax):"—","douleur moy. /10")+fig(A.sevDays,"jours de douleur forte (≥ 6)");
+  if(A.crisisCount)figures+=fig(A.crisisCount,"crises notées"+(A.criseICnt?` · moy. ${f1(A.criseISum/A.criseICnt)}/10`:""));
   if(A.periodDays||A.spottingDays)figures+=fig(A.periodDays,"jours de règles");
   figures+=fig(A.loggedDays+"/"+A.total,"jours notés");
   // tableau douleurs (localisation + jours + intensité + ressenti)
-  const painRows=painList.map(([k,c])=>`<tr><td>${labelOf(k)}</td><td class="num">${c}</td><td class="num em">${(A.isum[k]/A.icnt[k]).toFixed(1)}</td><td class="rp-ressenti">${topTypes(k)||"—"}</td></tr>`).join("");
+  const painRows=painList.map(([k,c])=>`<tr><td>${labelOf(k)}</td><td class="num">${c}</td><td class="num em">${f1(A.isum[k]/A.icnt[k])}</td><td class="rp-ressenti">${topTypes(k)||"—"}</td></tr>`).join("");
   const painSec=painRows?`<section class="rp-sec"><h3>Douleurs par localisation</h3><p class="rp-cap">Jours où la douleur a été notée, intensité moyenne (0–10) et nature ressentie.</p>
     <table><thead><tr><th>Localisation</th><th class="num">Jours</th><th class="num">Moy.</th><th>Ressenti</th></tr></thead><tbody>${painRows}</tbody></table></section>`:"";
   // autres symptômes
@@ -1867,7 +1875,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const foodNextLead=topNext?`<p style="margin:10px 0 0">À retardement — les <b>lendemains</b> de « ${esc(labelOf(topNext.k))} », la douleur est en moyenne de <b>${topNext.withAvg.toFixed(1).replace(".",",")}/10</b> contre <b>${topNext.woAvg.toFixed(1).replace(".",",")}/10</b> les autres lendemains.</p>`:"";
   const foodSec=(foodTbl||foodNextLead)?`<section class="rp-sec"><h3>Alimentation &amp; douleurs</h3><p class="rp-cap">Douleur moyenne les jours où l'aliment est noté, comparée aux autres jours — hors jours de règles, pour neutraliser l'effet du cycle. Indicatif.</p>${foodLead}${foodTbl}${foodNextLead}</section>`:"";
   // phases (seulement si applicable)
-  const phaseRows=PHASES.filter(p=>A.phaseCnt[p]).map(p=>`<tr><td>${p}</td><td class="num">${A.phaseCnt[p]}</td><td class="num em">${(A.phasePain[p]/A.phaseCnt[p]).toFixed(1)}</td></tr>`).join("");
+  const phaseRows=PHASES.filter(p=>A.phaseCnt[p]).map(p=>`<tr><td>${p}</td><td class="num">${A.phaseCnt[p]}</td><td class="num em">${f1(A.phasePain[p]/A.phaseCnt[p])}</td></tr>`).join("");
   const phaseSec=phaseRows?`<section class="rp-sec"><h3>Douleur par phase du cycle</h3><p class="rp-cap">Intensité moyenne (0–10) selon la phase.</p>
     <table><thead><tr><th>Phase</th><th class="num">Jours</th><th class="num">Moy.</th></tr></thead><tbody>${phaseRows}</tbody></table></section>`:"";
   // traitements
@@ -1895,11 +1903,11 @@ function buildReportHtml(days,forPrint,metaExtra){
   const meteoSec=(A.hotCnt>=5&&A.coolCnt>=5)?`<section class="rp-sec"><h3>Chaleur &amp; douleur</h3><p class="rp-prose">Hors jours de règles : les jours de <b>forte chaleur</b>, douleur moyenne <b>${(A.hotSum/A.hotCnt).toFixed(1).replace(".",",")}/10</b>, contre <b>${(A.coolSum/A.coolCnt).toFixed(1).replace(".",",")}/10</b> les jours tempérés ou froids. <span style="color:var(--ink-faint)">(${A.hotCnt} j vs ${A.coolCnt} j)</span></p></section>`:"";
   // comparaison
   const cmpRows=`<div class="cmp">
-    <div class="cmp-row"><span>Jours de douleur</span><span class="cmp-val">${A.painDays} ${trendBadge(A.painDays,P.painDays,true)}</span></div>
-    <div class="cmp-row"><span>Douleur moyenne /10</span><span class="cmp-val">${A.avgMax?A.avgMax.toFixed(1):"—"} ${trendBadge(A.avgMax,P.avgMax,true)}</span></div>
-    ${(A.periodDays||A.spottingDays||P.periodDays)?`<div class="cmp-row"><span>Jours de règles</span><span class="cmp-val">${A.periodDays} ${trendBadge(A.periodDays,P.periodDays,true)}</span></div>`:""}
-    ${A.crisisCount||P.crisisCount?`<div class="cmp-row"><span>Crises notées</span><span class="cmp-val">${A.crisisCount} ${trendBadge(A.crisisCount,P.crisisCount,true)}</span></div>`:""}</div>`;
-  const cmpSec=`<section class="rp-sec"><details class="cmp-details"${forPrint?" open":""}><summary>Évolution vs période précédente</summary>${cmpRows}</details></section>`;
+    <div class="cmp-row"><span>Jours de douleur</span><span class="cmp-val">${A.painDays} ${trendBadge(A.loggedDays?A.painDays/A.loggedDays:null,P.loggedDays?P.painDays/P.loggedDays:null,true)}</span></div>
+    <div class="cmp-row"><span>Douleur moyenne /10</span><span class="cmp-val">${A.avgMax?f1(A.avgMax):"—"} ${trendBadge(A.avgMax,P.avgMax,true)}</span></div>
+    ${(A.periodDays||A.spottingDays||P.periodDays)?`<div class="cmp-row"><span>Jours de règles</span><span class="cmp-val">${A.periodDays} ${trendBadge(A.loggedDays?A.periodDays/A.loggedDays:null,P.loggedDays?P.periodDays/P.loggedDays:null,true)}</span></div>`:""}
+    ${A.crisisCount||P.crisisCount?`<div class="cmp-row"><span>Crises notées</span><span class="cmp-val">${A.crisisCount} ${trendBadge(A.loggedDays?A.crisisCount/A.loggedDays:null,P.loggedDays?P.crisisCount/P.loggedDays:null,true)}</span></div>`:""}</div>`;
+  const cmpSec=`<section class="rp-sec"><details class="cmp-details"${forPrint?" open":""}><summary>Évolution vs période précédente</summary><p class="rp-cap" style="margin:8px 0 4px">Période équivalente juste avant : ${P.loggedDays} j notés (vs ${A.loggedDays}). Les comptes sont comparés <b>en proportion des jours notés</b>, pour neutraliser les différences de remplissage.</p>${cmpRows}</details></section>`;
   // profil cyclique vs non-cyclique
   let cycleLine="";
   {const s0=A.dates[0],s1=A.dates[A.dates.length-1];
@@ -1949,6 +1957,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const synthSec=synth.length?`<section class="rp-sec rp-synth"><h3>À retenir</h3><ul class="rp-keys">${synth.map(s=>`<li>${s}</li>`).join("")}</ul><p class="rp-cap" style="margin-top:8px">Synthèse indicative issue des saisies — à interpréter avec un professionnel, jamais comme un diagnostic.</p></section>`:"";
   return `<div class="report">
     <h2>Récapitulatif des symptômes</h2>
+    ${(forPrint&&(CFG.printName||CFG.birthdate))?`<div class="rp-meta" style="margin:-4px 0 2px">Suivi de <b>${esc(CFG.printName||CFG.name||"")}</b>${CFG.birthdate?` · née le ${frDMY(CFG.birthdate)}`:""}</div>`:""}
     <div class="rp-meta">${period} · ${A.total} jours${metaExtra?" · "+metaExtra:""}${(CFG.appointment&&parseYmd(CFG.appointment)>=parseYmd(todayStr()))?" · en vue du rendez-vous du "+prettyDate(CFG.appointment):""}</div>
     ${synthSec}
     <div class="rp-figures">${figures}</div>
@@ -1995,7 +2004,7 @@ function reportPlainText(days,metaExtra){
   const topTypes=k=>tbp[k]?Object.entries(tbp[k]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([tk])=>labelOf(tk).toLowerCase()).join(", "):"";
   const painList=Object.entries(A.freq).filter(([k])=>A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
   const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
-  let t=`RÉCAPITULATIF DES SYMPTÔMES\n${prettyDate(A.dates[0])} → ${prettyDate(A.dates[A.dates.length-1])} (${A.total} jours)${metaExtra?" — "+metaExtra:""}\n\n`;
+  let t=`RÉCAPITULATIF DES SYMPTÔMES\n${(CFG.printName||CFG.birthdate)?`Suivi de ${CFG.printName||CFG.name||""}${CFG.birthdate?" · née le "+frDMY(CFG.birthdate):""}\n`:""}${prettyDate(A.dates[0])} → ${prettyDate(A.dates[A.dates.length-1])} (${A.total} jours)${metaExtra?" — "+metaExtra:""}\n\n`;
   {const S=[];const cov=Math.round(100*A.loggedDays/A.total);S.push(`Suivi : ${A.loggedDays}/${A.total} j (${cov}%)${(A.total<14||cov<50||A.loggedDays<10)?" — données limitées":""}`);
    if(A.avgMax&&P.loggedDays>=5&&P.avgMax){const d=A.avgMax-P.avgMax;if(Math.abs(d)>=0.7)S.push(`Douleur moy. en ${d<0?"baisse":"hausse"} : ${f1(P.avgMax)} → ${f1(A.avgMax)}/10 vs période précédente`);}
    if(A.regPainCnt>=3&&A.nonRegPainCnt>=3){const rp=A.regPainSum/A.regPainCnt,np=A.nonRegPainSum/A.nonRegPainCnt;let v;if(rp-np>=1.5)v="plutôt cyclique";else if(np-rp>=1)v="non strictement cyclique (marquée aussi hors règles)";else v="mixte";S.push(`Profil : ${v} (règles ${f1(rp)} vs hors règles ${f1(np)}/10)`);}
@@ -2003,10 +2012,10 @@ function reportPlainText(days,metaExtra){
    (CFG.treatments||[]).filter(x=>x&&(x.name||"").trim()).forEach(x=>{const ts=treatStats(x,A.dates);if(ts.resp&&Math.abs(ts.resp.after-ts.resp.before)>=1)S.push(`${x.name} : ${f1(ts.resp.before)} → ${f1(ts.resp.after)}/10 (mois avant→après début)`);});
    {const ti=Object.values(A.impactFreq||{}).reduce((s,x)=>s+x,0);if(ti>=3){const red=(A.impactFreq.ralentie||0)+(A.impactFreq.alitee||0);if(red)S.push(`Retentissement : ${red}/${ti} j ralentis/très réduits`);}}
    t+=`À RETENIR\n`;S.forEach(s=>t+=`• ${s}\n`);t+=`\n`;}
-  t+=`CHIFFRES-CLÉS\n• Jours notés : ${A.loggedDays}/${A.total}\n• Jours avec symptômes : ${A.activeDays}\n• Jours de douleur : ${A.painDays}\n• Douleur moyenne : ${A.avgMax?A.avgMax.toFixed(1)+"/10":"—"}`;
+  t+=`CHIFFRES-CLÉS\n• Jours notés : ${A.loggedDays}/${A.total}\n• Jours de douleur : ${A.painDays} (dont ${A.sevDays} ≥ 6/10)\n• Douleur moyenne : ${A.avgMax?f1(A.avgMax)+"/10":"—"}`;
   if(A.periodDays||A.spottingDays)t+=`\n• Règles : ${A.periodDays} j · Spotting : ${A.spottingDays} j`;
   if(A.crisisCount)t+=`\n• Crises notées : ${A.crisisCount}`;
-  if(painList.length){t+=`\n\nDOULEURS PAR LOCALISATION (jours · moyenne /10 · ressenti)\n`;painList.forEach(([k,c])=>{const ty=topTypes(k);t+=`  - ${labelOf(k)} : ${c} j · ${(A.isum[k]/A.icnt[k]).toFixed(1)}/10${ty?" · "+ty:""}\n`;});}
+  if(painList.length){t+=`\n\nDOULEURS PAR LOCALISATION (jours · moyenne /10 · ressenti)\n`;painList.forEach(([k,c])=>{const ty=topTypes(k);t+=`  - ${labelOf(k)} : ${c} j · ${f1(A.isum[k]/A.icnt[k])}/10${ty?" · "+ty:""}\n`;});}
   if(otherList.length){t+=`\nAUTRES SYMPTÔMES (jours)\n`;otherList.forEach(([k,c])=>t+=`  - ${labelOf(k)} : ${c} j (${Math.round(100*c/A.total)}%)\n`);}
   if(A.fatCnt||A.fogDays){t+=`\nÉNERGIE & CONCENTRATION\n`;if(A.fatCnt)t+=`  - Fatigue moyenne : ${(A.fatSum/A.fatCnt).toFixed(1).replace(".",",")}/10 sur ${A.fatCnt} j\n`;if(A.fogDays){const fr=Object.entries(A.fogFreq||{}).sort((a,b)=>b[1]-a[1]).map(([k,c])=>`${labelOf(k)} (${c})`).join(", ");t+=`  - Brouillard cérébral : ${A.fogDays} j${fr?` — ${fr}`:""}\n`;}}
   {const ci=crossInsights(A.dates);const ins=[];
@@ -2015,7 +2024,7 @@ function reportPlainText(days,metaExtra){
    if(ins.length){t+=`\nOBSERVATIONS CROISÉES (indicatives)\n`;ins.forEach(s=>t+=`  - ${s}\n`);}}
   {const fr=foodInsights(A.dates);if(fr.length){t+=`\nALIMENTATION & DOULEURS (même jour, indicatif)\n`;fr.forEach(r=>{const w=r.withAvg.toFixed(1).replace(".",",");const o=r.woAvg!=null?r.woAvg.toFixed(1).replace(".",","):"—";t+=`  - ${labelOf(r.k)} : ${w}/10 sur ${r.cnt} j (sans : ${o}/10)\n`;});}}
   {const fn=foodNextDayInsights(A.dates).filter(r=>r.diff>=1&&r.woAvg!=null);if(fn.length){t+=`\nALIMENTATION — EFFET LENDEMAIN (indicatif)\n`;fn.slice(0,4).forEach(r=>t+=`  - ${labelOf(r.k)} → lendemain ${r.withAvg.toFixed(1).replace(".",",")}/10 (autres : ${r.woAvg.toFixed(1).replace(".",",")}/10)\n`);}}
-  const ph=PHASES.filter(p=>A.phaseCnt[p]);if(ph.length){t+=`\nDOULEUR PAR PHASE DU CYCLE\n`;ph.forEach(p=>t+=`  - ${p} : ${(A.phasePain[p]/A.phaseCnt[p]).toFixed(1)}/10 (${A.phaseCnt[p]} j)\n`);}
+  const ph=PHASES.filter(p=>A.phaseCnt[p]);if(ph.length){t+=`\nDOULEUR PAR PHASE DU CYCLE\n`;ph.forEach(p=>t+=`  - ${p} : ${f1(A.phasePain[p]/A.phaseCnt[p])}/10 (${A.phaseCnt[p]} j)\n`);}
   if(A.regPainCnt>=3&&A.nonRegPainCnt>=3){const rp=A.regPainSum/A.regPainCnt,np=A.nonRegPainSum/A.nonRegPainCnt;t+=`\nPROFIL DE LA DOULEUR\n  - Pendant les règles : ${rp.toFixed(1).replace(".",",")}/10 · hors règles : ${np.toFixed(1).replace(".",",")}/10\n`;}
   {const ti=Object.values(A.impactFreq||{}).reduce((s,x)=>s+x,0),tm=Object.values(A.moodFreq||{}).reduce((s,x)=>s+x,0);const L=[],ml={sereine:"sereine",anxieuse:"anxieuse",irritable:"irritable",triste:"triste"};if(ti>=3){const red=(A.impactFreq.ralentie||0)+(A.impactFreq.alitee||0),al=A.impactFreq.alitee||0;L.push(`Journées ralenties/très réduites : ${red}/${ti}${al?` (dont ${al} très réduites)`:""}`);}if(tm>=3){const top=Object.entries(A.moodFreq).sort((a,b)=>b[1]-a[1])[0];if(top)L.push(`Humeur la plus fréquente : ${ml[top[0]]||top[0]} (${top[1]} j)`);}if(L.length){t+=`\nRETENTISSEMENT SUR LA VIE\n`;L.forEach(s=>t+=`  - ${s}\n`);}}
   const r=A.reliefStat,totR=(r.oui||0)+(r.peu||0)+(r.non||0);
@@ -2246,11 +2255,11 @@ function toggleCard(card,key){
 }
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
 const WHATSNEW=[
- "Partagez votre récapitulatif avec votre médecin en deux gestes — bouton « Partager » dans Mon suivi.",
- "Récapitulatif plus fiable : comparaisons calculées hors jours de règles, effectifs affichés, et statistiques de cycle (nombre et durée).",
- "Nouveau dans Tendances : l'historique par zone.",
- "Dans les Réglages : politique de confidentialité, effacement complet des données, signalement de problème.",
- "Lisibilité et confort tactile renforcés."
+ "Récapitulatif prêt pour le dossier médical : en-tête facultatif (nom, date de naissance) dans les Réglages — imprimé uniquement si vous le remplissez.",
+ "Comparaisons plus justes : évolution calculée en proportion des jours notés, décimales harmonisées, intensité moyenne des crises affichée.",
+ "Partagez votre récapitulatif en deux gestes — bouton « Partager » dans Mon suivi.",
+ "Dans Tendances : l'historique par zone. Dans les Réglages : politique de confidentialité, effacement complet, signalement.",
+ "Sauvegarde renforcée et lisibilité améliorée."
 ];
 function openWhatsNew(){
   const ul=document.getElementById("wn-list");ul.innerHTML="";
@@ -2299,6 +2308,10 @@ async function init(){
   document.getElementById("share-recap-btn").onclick=shareRecap;
   document.getElementById("show-wn").onclick=openWhatsNew;
   document.getElementById("wipe-all").onclick=wipeAll;
+  const pn=document.getElementById("print-name"),pd=document.getElementById("print-dob");
+  pn.value=CFG.printName||"";pd.value=CFG.birthdate||"";
+  pn.addEventListener("change",()=>{CFG.printName=cleanText(pn.value,80);pn.value=CFG.printName;saveConfig();});
+  pd.addEventListener("change",()=>{CFG.birthdate=pd.value||"";saveConfig();});
   document.getElementById("wc-start").onclick=finishWelcome;
   document.getElementById("wc-name").addEventListener("keydown",e=>{if(e.key==="Enter")finishWelcome();});
 
