@@ -751,6 +751,7 @@
     <div class="mtypes-label" id="modal-types-label">Type de douleur ressentie (optionnel)</div>
     <div class="mzones" id="modal-types"></div>
     <label class="bilat" id="modal-bilat-wrap" style="display:none"><input type="checkbox" id="modal-bilat"><span>Bilatéral — noter aussi à <b id="modal-bilat-side"></b></span></label>
+    <div id="rap-moment-wrap" style="display:none;margin:10px 0 2px"><div class="lbl" style="margin-bottom:6px">Moment de la douleur</div><div class="seg" id="rap-moment"></div></div>
     <input type="text" class="pain-note show" id="modal-note" placeholder="Note (optionnel)…" style="margin-top:14px">
     <div class="mbtns"><button class="btn btn-primary" id="modal-ok">OK</button></div>
   </div>
@@ -832,7 +833,7 @@
 function cssEsc(s){return (typeof CSS!=="undefined"&&CSS.escape)?CSS.escape(s):String(s).replace(/[^a-zA-Z0-9_-]/g,c=>"\\"+c);}
 
 /* ===== Listes par défaut ===== */
-const DEF_PAINS=[["ovaire_d","Ovaire / bas-ventre droit"],["ovaire_g","Ovaire / bas-ventre gauche"],["pelvienne","Douleur pelvienne (bas-ventre)"],["lombaire","Douleurs lombaires"],["dorsale","Douleurs dorsales / haut du dos"],["fesse_d","Fesse droite"],["fesse_g","Fesse gauche"],["jambe_d","Jambe droite / sciatique"],["jambe_g","Jambe gauche / sciatique"],["rapports","Pendant les rapports"],["defecation","À la défécation"],["urinaire","Douleurs urinaires"],["tete","Maux de tête / migraine"]];
+const DEF_PAINS=[["ovaire_d","Ovaire / bas-ventre droit"],["ovaire_g","Ovaire / bas-ventre gauche"],["pelvienne","Douleur pelvienne (bas-ventre)"],["lombaire","Douleurs lombaires"],["dorsale","Douleurs dorsales / haut du dos"],["fesse_d","Fesse droite"],["fesse_g","Fesse gauche"],["jambe_d","Jambe droite / sciatique"],["jambe_g","Jambe gauche / sciatique"],["rapports","Douleurs liées aux rapports"],["defecation","À la défécation"],["urinaire","Douleurs urinaires"],["tete","Maux de tête / migraine"]];
 const DEF_DIG=[["ballonnements","Ballonnements (ventre gonflé)"],["coliques","Coliques / crampes"],["diarrhee","Diarrhée"],["constipation","Constipation"],["nausees","Nausées"],["vomissements","Vomissements"],["defecation","Douleur à la défécation"],["sang_selles","Sang dans les selles"]];
 const DEF_GEN=[["courbatures","Courbatures"],["febrile","Sensation fébrile"],["sommeil","Troubles du sommeil"],["vertiges","Vertiges"],["humeur","Humeur basse / anxiété"],["saign_anormaux","Saignements inhabituels"],["urinaire","Brûlures / urgences urinaires"],["sang_urines","Sang dans les urines"]];
 const DEF_FOG=[["concentration","Concentration difficile"],["oublis","Oublis"],["confusion","Confusion"],["ralenti","Sensation d'être ralenti·e"],["mots","Manque du mot"]];
@@ -843,7 +844,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="60";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="62";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -887,6 +888,7 @@ function migrate(){
   if(CFG.birthdate===undefined){CFG.birthdate="";changed=true;}
   if(CFG.gen&&CFG.gen.includes("dyspareunie")){CFG.gen=CFG.gen.filter(k=>k!=="dyspareunie");changed=true;}
   if(CFG.labels&&CFG.labels.dyspareunie!=="Après les rapports"){CFG.labels.dyspareunie="Après les rapports";changed=true;}
+  if(CFG.labels&&CFG.labels.rapports==="Pendant les rapports"){CFG.labels.rapports="Douleurs liées aux rapports";changed=true;}
   if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
   if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -931,7 +933,7 @@ function lerpHex(c1,c2,t){const p=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice
 
 /* ===== État de saisie ===== */
 let curDate=todayStr(), entry=blankEntry();
-function blankEntry(){return {pains:{},painNotes:{},painTypes:{},dig:[],gen:[],fog:[],food:[],fatigue:0,regles:false,spotting:false,flux:"moyen",ctx:{sommeil:"",stress:"",activite:"",impact:"",mood:""},meds:{},crises:[],ras:false,note:""};}
+function blankEntry(){return {pains:{},painNotes:{},painTypes:{},dig:[],gen:[],fog:[],food:[],fatigue:0,regles:false,spotting:false,flux:"moyen",rapportsMoment:"",ctx:{sommeil:"",stress:"",activite:"",impact:"",mood:""},meds:{},crises:[],ras:false,note:""};}
 function loadEntryFor(date){
   const raw=DATA[date]; entry=blankEntry();
   if(raw){
@@ -939,12 +941,12 @@ function loadEntryFor(date){
     entry.dig=[...(raw.dig||[])]; entry.gen=[...(raw.gen||[])]; entry.fog=[...(raw.fog||[])]; entry.food=[...(raw.food||[])]; entry.fatigue=raw.fatigue||0;
     entry.regles=raw.regles!==undefined?!!raw.regles:(raw.cycle==="regles");
     entry.spotting=raw.spotting!==undefined?!!raw.spotting:(raw.cycle==="spotting");
-    entry.flux=raw.flux||"moyen";
+    entry.flux=raw.flux||"moyen"; entry.rapportsMoment=raw.rapportsMoment||"";
     entry.ctx=Object.assign({sommeil:"",stress:"",activite:"",impact:"",mood:""},raw.ctx||{});
     entry.meds=Object.assign({},raw.meds||{}); entry.crises=Array.isArray(raw.crises)?JSON.parse(JSON.stringify(raw.crises)):[]; entry.ras=!!raw.ras; entry.note=raw.note||"";
   }
 }
-function entryIsEmpty(e){return Object.keys(e.pains).length===0&&e.dig.length===0&&e.gen.length===0&&(!e.fog||e.fog.length===0)&&(!e.food||e.food.length===0)&&!e.fatigue&&!e.regles&&!e.spotting&&!e.note.trim()&&!e.ctx.sommeil&&!e.ctx.stress&&!e.ctx.activite&&!e.ctx.impact&&!e.ctx.mood&&!e.ctx.meteo&&Object.keys(e.meds).length===0&&(!e.crises||e.crises.length===0);}
+function entryIsEmpty(e){return Object.keys(e.pains).length===0&&e.dig.length===0&&e.gen.length===0&&(!e.fog||e.fog.length===0)&&(!e.food||e.food.length===0)&&!e.fatigue&&!e.regles&&!e.spotting&&!e.rapportsMoment&&!e.note.trim()&&!e.ctx.sommeil&&!e.ctx.stress&&!e.ctx.activite&&!e.ctx.impact&&!e.ctx.mood&&!e.ctx.meteo&&Object.keys(e.meds).length===0&&(!e.crises||e.crises.length===0);}
 
 /* ===== Construction du formulaire ===== */
 function buildForm(){
@@ -1094,11 +1096,9 @@ function buildPainList(){
         <div class="pain2-line"><span class="pain2-name">${label}</span><span class="pain2-val" id="val-${k}">—</span></div>
         ${idx===0?'<div class="pain2-hint">Maintenez le point puis glissez vers la droite pour régler la douleur.</div>':''}
         <div class="pain2-track" id="trk-${k}"><div class="pain2-fill" id="fill-${k}"></div><div class="pain2-knob" id="knob-${k}"></div></div>
-        ${k==="rapports"?`<label class="pain2-after"><input type="checkbox" id="chk-apres-rapports"> douleur aussi <b>après</b> le rapport</label>`:""}
       </div>`;
     pl.appendChild(row);
     attachPainControl(row,k);
-    if(k==="rapports"){const cb=row.querySelector("#chk-apres-rapports");if(cb){cb.checked=entry.gen.includes("dyspareunie");cb.onchange=()=>{const i=entry.gen.indexOf("dyspareunie");if(cb.checked&&i<0)entry.gen.push("dyspareunie");if(!cb.checked&&i>=0)entry.gen.splice(i,1);};}}
   });
   refreshPainValues();
 }
@@ -1148,7 +1148,7 @@ function attachMeasure(row, get, set, onRelease){
 }
 function attachPainControl(row,k){
   attachMeasure(row, ()=>entry.pains[k]||0,
-    v=>{if(v>0)entry.pains[k]=v; else {delete entry.pains[k];delete entry.painNotes[k];delete entry.painTypes[k];}},
+    v=>{if(v>0)entry.pains[k]=v; else {delete entry.pains[k];delete entry.painNotes[k];delete entry.painTypes[k];if(k==="rapports"){entry.rapportsMoment="";const gi=entry.gen.indexOf("dyspareunie");if(gi>=0)entry.gen.splice(gi,1);}}},
     v=>{if(v>0)openModal(k);});
 }
 function refreshPainValues(){
@@ -1347,7 +1347,7 @@ function renderApptArea(){
 }
 
 /* ===== Modal intensité (schéma) ===== */
-let modalKey=null, modalTypes=[];
+let modalKey=null, modalTypes=[], modalMoment="";
 function paintTypePills(container,selected,editable){
   if(!container)return;container.innerHTML="";
   const list=CFG.ptypes||[];
@@ -1407,6 +1407,16 @@ function openModal(k){
   paintTypePills(document.getElementById("modal-types"),modalTypes,true);
   const bw=document.getElementById("modal-bilat-wrap"),bc=document.getElementById("modal-bilat");
   if(bw&&bc){ if(modalMirror){ bw.style.display="flex"; bc.checked=false; document.getElementById("modal-bilat-side").textContent=labelOf(modalMirror); } else { bw.style.display="none"; bc.checked=false; } }
+  const rw=document.getElementById("rap-moment-wrap");
+  if(rw){
+    if(k==="rapports"){
+      rw.style.display="block";
+      modalMoment=entry.rapportsMoment||(entry.gen.includes("dyspareunie")?(entry.pains[k]?"deux":"apres"):"pendant");
+      const seg=document.getElementById("rap-moment");
+      seg.innerHTML=[["pendant","Pendant"],["apres","Après"],["deux","Les deux"]].map(([kk,l])=>`<button type="button" class="chip${kk===modalMoment?" on":""}" data-k="${kk}">${l}</button>`).join("");
+      seg.querySelectorAll(".chip").forEach(b=>{b.onclick=()=>{modalMoment=b.dataset.k;seg.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===b));};});
+    } else { rw.style.display="none"; modalMoment=""; }
+  }
   r.oninput=()=>{v.textContent=r.value;v.style.color=intensityColor(+r.value);};
   document.getElementById("modal-bg").classList.add("show");
 }
@@ -1419,6 +1429,13 @@ function closeModal(){
     if(modalMirror&&bc&&bc.checked){
       if(v>0){entry.pains[modalMirror]=v;if(n.value.trim())entry.painNotes[modalMirror]=n.value;else delete entry.painNotes[modalMirror];if(modalTypes.length)entry.painTypes[modalMirror]=modalTypes.slice();else delete entry.painTypes[modalMirror];}
       else{delete entry.pains[modalMirror];delete entry.painNotes[modalMirror];delete entry.painTypes[modalMirror];}
+    }
+    if(modalKey==="rapports"){
+      entry.rapportsMoment=(v>0&&modalMoment)?modalMoment:"";
+      const wantAfter=v>0&&(modalMoment==="apres"||modalMoment==="deux");
+      const gi=entry.gen.indexOf("dyspareunie");
+      if(wantAfter&&gi<0)entry.gen.push("dyspareunie");
+      if(!wantAfter&&gi>=0)entry.gen.splice(gi,1);
     }
   }
   document.getElementById("modal-bg").classList.remove("show");
@@ -1462,7 +1479,7 @@ async function quickRAS(){
 }
 
 /* ===== Enregistrer / supprimer ===== */
-function entryRecord(){return {pains:entry.pains,painNotes:entry.painNotes,painTypes:entry.painTypes,dig:entry.dig,gen:entry.gen,fog:entry.fog,food:entry.food,fatigue:entry.fatigue,regles:entry.regles,spotting:entry.spotting,flux:entry.flux,ctx:entry.ctx,meds:entry.meds,crises:entry.crises,ras:entry.ras,note:entry.note.trim()};}
+function entryRecord(){return {pains:entry.pains,painNotes:entry.painNotes,painTypes:entry.painTypes,dig:entry.dig,gen:entry.gen,fog:entry.fog,food:entry.food,fatigue:entry.fatigue,regles:entry.regles,spotting:entry.spotting,flux:entry.flux,rapportsMoment:entry.rapportsMoment||"",ctx:entry.ctx,meds:entry.meds,crises:entry.crises,ras:entry.ras,note:entry.note.trim()};}
 function stableStr(o){return JSON.stringify(o,(k,v)=>{if(v&&typeof v==="object"&&!Array.isArray(v)){const s={};Object.keys(v).sort().forEach(key=>{s[key]=v[key];});return s;}return v;});}
 /* Filet de sécurité : si la journée en cours a été modifiée et qu'on s'en va
    (changement de jour ou d'onglet) sans avoir appuyé sur Enregistrer,
@@ -1685,7 +1702,7 @@ function aggregate(days,offset){
   const freq={},isum={},icnt={},painKeys=new Set(),phasePain={},phaseCnt={},cycleDayPain={},cycleDayCnt={},reliefStat={},typeFreq={},typeByPain={},medStat={};
   const starts=cycleStarts();
   let activeDays=0,painDays=0,periodDays=0,spottingDays=0,loggedDays=0,sumMax=0,maxCnt=0,crisisCount=0,crisisDays=0;
-  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,criseISum=0,criseICnt=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0;
+  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,criseISum=0,criseICnt=0,rapPend=0,rapApres=0,rapDeux=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0;
   dates.forEach(ds=>{const e=DATA[ds];let any=false;if(e){loggedDays++;
     const pk=Object.keys(e.pains||{});
     pk.forEach(k=>{const v=e.pains[k];freq[k]=(freq[k]||0)+1;isum[k]=(isum[k]||0)+v;icnt[k]=(icnt[k]||0)+1;painKeys.add(k);any=true;});
@@ -1711,11 +1728,12 @@ function aggregate(days,offset){
     if(cd!==null){cycleDayPain[cd]=(cycleDayPain[cd]||0)+mx;cycleDayCnt[cd]=(cycleDayCnt[cd]||0)+1;}
     if(e.ctx&&e.ctx.sommeil==="mal"){badSleepDays++;if(mx>=6)badSleepPain++;}
     if(mx>=6)sevDays++;
+    if((e.pains&&e.pains.rapports)||(e.gen||[]).includes("dyspareunie")){const rm=e.rapportsMoment||(((e.gen||[]).includes("dyspareunie"))?((e.pains&&e.pains.rapports)?"deux":"apres"):"pendant");if(rm==="pendant")rapPend++;else if(rm==="apres")rapApres++;else if(rm==="deux")rapDeux++;}
     if(e.ctx&&e.ctx.stress&&!e.regles){if(e.ctx.stress==="eleve"){stressHiSum+=mx;stressHiCnt++;}else{stressLoSum+=mx;stressLoCnt++;}}
     if(e.ctx&&e.ctx.meteo){meteoFreq[e.ctx.meteo]=(meteoFreq[e.ctx.meteo]||0)+1;if(!e.regles){if(e.ctx.meteo==="chaud"){hotSum+=mx;hotCnt++;}else{coolSum+=mx;coolCnt++;}}}
     if(any)activeDays++;
   }});
-  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,sevDays,criseISum,criseICnt,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
+  return {dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,sevDays,criseISum,criseICnt,rapPend,rapApres,rapDeux,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
 }
 const topFreq=(A,n)=>Object.entries(A.freq).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
@@ -1842,7 +1860,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const topTypes=k=>tbp[k]?Object.entries(tbp[k]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([tk])=>labelOf(tk).toLowerCase()).join(", "):"";
   // listes
   const painList=Object.entries(A.freq).filter(([k])=>A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
-  const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
+  const hideDysp=!!A.freq.rapports;const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)&&!(hideDysp&&k==="dyspareunie")).sort((a,b)=>b[1]-a[1]);
   // prose synthèse (concise, conditionnelle)
   let prose=`Sur ${A.total} jours, des symptômes ont été notés ${A.activeDays} jour(s), dont <b>${A.painDays}</b> avec une douleur localisée`;
   prose+=A.avgMax?` (intensité moyenne <b>${f1(A.avgMax)}/10</b>). `:`. `;
@@ -1855,7 +1873,8 @@ function buildReportHtml(days,forPrint,metaExtra){
   if(A.periodDays||A.spottingDays)figures+=fig(A.periodDays,"jours de règles");
   figures+=fig(A.loggedDays+"/"+A.total,"jours notés");
   // tableau douleurs (localisation + jours + intensité + ressenti)
-  const painRows=painList.map(([k,c])=>`<tr><td>${labelOf(k)}</td><td class="num">${c}</td><td class="num em">${f1(A.isum[k]/A.icnt[k])}</td><td class="rp-ressenti">${topTypes(k)||"—"}</td></tr>`).join("");
+  const rapMoments=()=>{const p=[];if(A.rapPend)p.push(`pendant ${A.rapPend} j`);if(A.rapApres)p.push(`après ${A.rapApres} j`);if(A.rapDeux)p.push(`les deux ${A.rapDeux} j`);return p.join(" · ");};
+  const painRows=painList.map(([k,c])=>`<tr><td>${labelOf(k)}</td><td class="num">${c}</td><td class="num em">${f1(A.isum[k]/A.icnt[k])}</td><td class="rp-ressenti">${k==="rapports"&&rapMoments()?rapMoments()+(topTypes(k)?" — "+topTypes(k):""):(topTypes(k)||"—")}</td></tr>`).join("");
   const painSec=painRows?`<section class="rp-sec"><h3>Douleurs par localisation</h3><p class="rp-cap">Jours où la douleur a été notée, intensité moyenne (0–10) et nature ressentie.</p>
     <table><thead><tr><th>Localisation</th><th class="num">Jours</th><th class="num">Moy.</th><th>Ressenti</th></tr></thead><tbody>${painRows}</tbody></table></section>`:"";
   // autres symptômes
@@ -2009,7 +2028,7 @@ function reportPlainText(days,metaExtra){
   const tbp=A.typeByPain||{};
   const topTypes=k=>tbp[k]?Object.entries(tbp[k]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([tk])=>labelOf(tk).toLowerCase()).join(", "):"";
   const painList=Object.entries(A.freq).filter(([k])=>A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
-  const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
+  const hideDysp=!!A.freq.rapports;const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)&&!(hideDysp&&k==="dyspareunie")).sort((a,b)=>b[1]-a[1]);
   let t=`RÉCAPITULATIF DES SYMPTÔMES\n${(CFG.printName||CFG.birthdate)?`Suivi de ${CFG.printName||CFG.name||""}${CFG.birthdate?" · née le "+frDMY(CFG.birthdate):""}\n`:""}${prettyDate(A.dates[0])} → ${prettyDate(A.dates[A.dates.length-1])} (${A.total} jours)${metaExtra?" — "+metaExtra:""}\n\n`;
   {const S=[];const cov=Math.round(100*A.loggedDays/A.total);S.push(`Suivi : ${A.loggedDays}/${A.total} j (${cov}%)${(A.total<14||cov<50||A.loggedDays<10)?" — données limitées":""}`);
    if(A.avgMax&&P.loggedDays>=5&&P.avgMax){const d=A.avgMax-P.avgMax;if(Math.abs(d)>=0.7)S.push(`Douleur moy. en ${d<0?"baisse":"hausse"} : ${f1(P.avgMax)} → ${f1(A.avgMax)}/10 vs période précédente`);}
@@ -2021,7 +2040,7 @@ function reportPlainText(days,metaExtra){
   t+=`CHIFFRES-CLÉS\n• Jours notés : ${A.loggedDays}/${A.total}\n• Jours de douleur : ${A.painDays} (dont ${A.sevDays} ≥ 6/10)\n• Douleur moyenne : ${A.avgMax?f1(A.avgMax)+"/10":"—"}`;
   if(A.periodDays||A.spottingDays)t+=`\n• Règles : ${A.periodDays} j · Spotting : ${A.spottingDays} j`;
   if(A.crisisCount)t+=`\n• Crises notées : ${A.crisisCount}`;
-  if(painList.length){t+=`\n\nDOULEURS PAR LOCALISATION (jours · moyenne /10 · ressenti)\n`;painList.forEach(([k,c])=>{const ty=topTypes(k);t+=`  - ${labelOf(k)} : ${c} j · ${f1(A.isum[k]/A.icnt[k])}/10${ty?" · "+ty:""}\n`;});}
+  if(painList.length){t+=`\n\nDOULEURS PAR LOCALISATION (jours · moyenne /10 · ressenti)\n`;painList.forEach(([k,c])=>{const ty=topTypes(k);const rm=(k==="rapports")?[A.rapPend?`pendant ${A.rapPend} j`:"",A.rapApres?`après ${A.rapApres} j`:"",A.rapDeux?`les deux ${A.rapDeux} j`:""].filter(Boolean).join(" · "):"";t+=`  - ${labelOf(k)} : ${c} j · ${f1(A.isum[k]/A.icnt[k])}/10${rm?" · "+rm:""}${ty?" · "+ty:""}\n`;});}
   if(otherList.length){t+=`\nAUTRES SYMPTÔMES (jours)\n`;otherList.forEach(([k,c])=>t+=`  - ${labelOf(k)} : ${c} j (${Math.round(100*c/A.total)}%)\n`);}
   if(A.fatCnt||A.fogDays){t+=`\nÉNERGIE & CONCENTRATION\n`;if(A.fatCnt)t+=`  - Fatigue moyenne : ${(A.fatSum/A.fatCnt).toFixed(1).replace(".",",")}/10 sur ${A.fatCnt} j\n`;if(A.fogDays){const fr=Object.entries(A.fogFreq||{}).sort((a,b)=>b[1]-a[1]).map(([k,c])=>`${labelOf(k)} (${c})`).join(", ");t+=`  - Brouillard cérébral : ${A.fogDays} j${fr?` — ${fr}`:""}\n`;}}
   {const ci=crossInsights(A.dates);const ins=[];
@@ -2261,11 +2280,11 @@ function toggleCard(card,key){
 }
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
 const WHATSNEW=[
- "Récapitulatif prêt pour le dossier médical : en-tête facultatif (nom, date de naissance) dans les Réglages — imprimé uniquement si vous le remplissez.",
- "Comparaisons plus justes : évolution calculée en proportion des jours notés, décimales harmonisées, intensité moyenne des crises affichée.",
- "Partagez votre récapitulatif en deux gestes — bouton « Partager » dans Mon suivi.",
- "Dans Tendances : l'historique par zone. Dans les Réglages : politique de confidentialité, effacement complet, signalement.",
- "Sauvegarde renforcée et lisibilité améliorée."
+ "Douleurs liées aux rapports : notez l'intensité (0-10), puis précisez le moment — Pendant, Après, ou Les deux — dans la fenêtre qui s'ouvre.",
+ "Récapitulatif prêt pour le dossier médical : en-tête facultatif (nom, date de naissance) dans les Réglages.",
+ "Analyses plus fiables : comparaisons hors jours de règles, en proportion des jours notés, statistiques de cycle.",
+ "Partage du récapitulatif en deux gestes, historique par zone dans Tendances.",
+ "Mises à jour désormais fiables et immédiates au redémarrage."
 ];
 function openWhatsNew(){
   const ul=document.getElementById("wn-list");ul.innerHTML="";
