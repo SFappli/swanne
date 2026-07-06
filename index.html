@@ -844,7 +844,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="62";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="63";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -856,10 +856,14 @@ async function rawGet(key){
   const v=await idb.get(key); if(v!=null)return v;
   try{return localStorage.getItem(key);}catch(e){return null;}
 }
+/* Écriture en MIROIR dans tous les magasins disponibles (IndexedDB + localStorage).
+   Si l'un est corrompu ou évincé par le système, l'autre contient une copie fraîche. */
 async function rawSet(key,val){
-  if(window.storage&&window.storage.set){try{await window.storage.set(key,val);return true;}catch(e){}}
-  const ok=await idb.set(key,val); if(ok)return true;
-  try{localStorage.setItem(key,val);return true;}catch(e){return false;}
+  let ok=false;
+  if(window.storage&&window.storage.set){try{await window.storage.set(key,val);ok=true;}catch(e){}}
+  try{if(await idb.set(key,val))ok=true;}catch(e){}
+  try{localStorage.setItem(key,val);ok=true;}catch(e){}
+  return ok;
 }
 async function loadData(){const v=await rawGet(STORE_KEY);try{return v?JSON.parse(v):{};}catch(e){return {};}}
 async function saveData(){return await rawSet(STORE_KEY,JSON.stringify(DATA));}
@@ -889,6 +893,7 @@ function migrate(){
   if(CFG.gen&&CFG.gen.includes("dyspareunie")){CFG.gen=CFG.gen.filter(k=>k!=="dyspareunie");changed=true;}
   if(CFG.labels&&CFG.labels.dyspareunie!=="Après les rapports"){CFG.labels.dyspareunie="Après les rapports";changed=true;}
   if(CFG.labels&&CFG.labels.rapports==="Pendant les rapports"){CFG.labels.rapports="Douleurs liées aux rapports";changed=true;}
+  if(CFG.lastNudgeAt===undefined){CFG.lastNudgeAt="";changed=true;}
   if(CFG.customZones===undefined){CFG.customZones=[];changed=true;}
   if(CFG.zoneSnap===undefined){CFG.zoneSnap=true;changed=true;}
   if(CFG.ptypes===undefined||(Array.isArray(CFG.ptypes)&&CFG.ptypes.length===0&&CFG.version<4)){CFG.ptypes=DEF_PTYPES.map(x=>x[0]);DEF_PTYPES.forEach(([k,l])=>{if(!CFG.labels[k])CFG.labels[k]=l;});changed=true;}
@@ -2284,12 +2289,25 @@ const WHATSNEW=[
  "Récapitulatif prêt pour le dossier médical : en-tête facultatif (nom, date de naissance) dans les Réglages.",
  "Analyses plus fiables : comparaisons hors jours de règles, en proportion des jours notés, statistiques de cycle.",
  "Partage du récapitulatif en deux gestes, historique par zone dans Tendances.",
- "Mises à jour désormais fiables et immédiates au redémarrage."
+ "Vos données sont enregistrées en double sur l'appareil, et Swanne. vous rappelle d'exporter une sauvegarde de temps en temps."
 ];
 function openWhatsNew(){
   const ul=document.getElementById("wn-list");ul.innerHTML="";
   WHATSNEW.forEach(t=>{const li=document.createElement("li");li.textContent=t;ul.appendChild(li);});
   document.getElementById("wn-bg").classList.add("show");
+}
+/* Rappel doux : si ≥14 jours de données et aucune sauvegarde externe (fichier ou Drive)
+   depuis 30 jours, proposer l'export — au plus une fois par semaine. */
+function maybeNudgeBackup(){
+  if(!CFG.onboarded)return;
+  const wn=document.getElementById("wn-bg");if(wn&&wn.classList.contains("show"))return;
+  if(Object.keys(DATA).length<14)return;
+  const M=86400000;
+  const last=Math.max(CFG.lastBackup?Date.parse(CFG.lastBackup)||0:0, CFG.driveLastBackup?Date.parse(CFG.driveLastBackup)||0:0);
+  if(last&&Date.now()-last<30*M)return;
+  if(CFG.lastNudgeAt&&Date.now()-(Date.parse(CFG.lastNudgeAt)||0)<7*M)return;
+  CFG.lastNudgeAt=new Date().toISOString();saveConfig();
+  showSnack("Pensez à mettre vos données à l'abri (fichier ou Drive).",()=>shareBackup(),"Exporter");
 }
 function maybeShowWhatsNew(){
   if(!CFG.onboarded){CFG.lastSeenVersion=APP_VERSION;return;}
@@ -2323,6 +2341,8 @@ async function init(){
   refreshReminder();refreshBackup();
   if(!CFG.onboarded)showWelcome();
   maybeShowWhatsNew();
+  setTimeout(maybeNudgeBackup,2500);
+  if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(p=>p||(navigator.storage.persist?navigator.storage.persist():false)).then(p=>{const el=document.getElementById("app-about");if(el&&p&&!/protégé/.test(el.textContent))el.textContent+=" · stockage protégé ✓";}).catch(()=>{});}
   document.getElementById("wn-ok").onclick=()=>document.getElementById("wn-bg").classList.remove("show");
   document.getElementById("wn-bg").onclick=e=>{if(e.target.id==="wn-bg")document.getElementById("wn-bg").classList.remove("show");};
   document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil";
