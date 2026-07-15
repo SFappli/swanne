@@ -499,7 +499,7 @@
 <div class="welcome" id="welcome">
   <div class="wc-inner">
     <div class="wc-brand">Swanne<span class="brand-dot">.</span></div>
-    <p class="wc-lead">Votre carnet privé pour suivre vos symptômes au quotidien. Tout reste sur cet appareil — rien n'est envoyé ailleurs.</p>
+    <p class="wc-lead">Votre carnet privé pour suivre vos symptômes au quotidien. Vos données restent sur cet appareil : rien n'est envoyé ailleurs sans votre accord (export ou sauvegarde Google Drive).</p>
     <label class="wc-label" for="wc-name">Comment souhaitez-vous que l'application vous appelle ?</label>
     <input type="text" id="wc-name" class="txt" placeholder="Votre prénom (facultatif)" maxlength="30" autocomplete="off">
     <button class="btn btn-primary" id="wc-start" style="width:100%;margin-top:18px">Commencer</button>
@@ -2345,7 +2345,7 @@ async function init(){
   if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(p=>p||(navigator.storage.persist?navigator.storage.persist():false)).then(p=>{const el=document.getElementById("app-about");if(el&&p&&!/protégé/.test(el.textContent))el.textContent+=" · stockage protégé ✓";}).catch(()=>{});}
   document.getElementById("wn-ok").onclick=()=>document.getElementById("wn-bg").classList.remove("show");
   document.getElementById("wn-bg").onclick=e=>{if(e.target.id==="wn-bg")document.getElementById("wn-bg").classList.remove("show");};
-  document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil";
+  document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil, sauf sauvegarde Drive que vous activez";
   document.getElementById("report-issue").onclick=()=>{
     const body=encodeURIComponent("Bonjour,\n\nJe rencontre un problème avec Swanne. :\n\n(décrivez le problème ici — n'hésitez pas à joindre une capture d'écran)\n\n—\nVersion : v"+APP_VERSION+"\nAppareil : "+navigator.userAgent);
     location.href="mailto:sfappli.contact@gmail.com?subject="+encodeURIComponent("Swanne. v"+APP_VERSION+" — signalement")+"&body="+body;
@@ -2402,7 +2402,13 @@ async function init(){
   document.getElementById("help-ok").onclick=()=>document.getElementById("help-bg").classList.remove("show");
   document.getElementById("help-bg").onclick=e=>{if(e.target.id==="help-bg")document.getElementById("help-bg").classList.remove("show");};
 }
-gateThen(()=>{Promise.resolve().then(init).catch(e=>console.error("init",e));});
+/* On lit le code de verrouillage AVANT d'afficher l'app : sinon CFG.pin est
+   encore vide (défaut ligne ~848) au moment où gateThen teste, et le verrou
+   ne s'affiche jamais au lancement à froid. init() rechargera CFG en entier. */
+(async function(){
+  try{const v=await rawGet(CONFIG_KEY);const c=v?JSON.parse(v):null;if(c&&c.pin)CFG.pin=c.pin;}catch(e){}
+  gateThen(()=>{Promise.resolve().then(init).catch(e=>console.error("init",e));});
+})();
 </script>
 <script>
 (function(){var b=document.getElementById("boot");if(!b)return;var t0=Date.now(),MIN=2100,CAP=4800,done=false;

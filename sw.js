@@ -23,14 +23,24 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return; // on ne gère que nos propres fichiers
 
   if (req.mode === "navigate") {
-    // réseau d'abord (pour récupérer les mises à jour), cache en secours (hors-ligne)
+    // Réseau d'abord (pour récupérer les mises à jour), MAIS plafonné à 3 s :
+    // sur un signal faible mais vivant, le lancement ne doit pas rester bloqué
+    // sur le fetch. Passé le délai, on sert le cache tout de suite ; la requête
+    // réseau se poursuit en arrière-plan et rafraîchit le cache pour la fois suivante.
+    const fromNet = (async () => {
+      const net = await fetch(req, {cache:"no-cache"});
+      if (net && net.ok) { (await caches.open(CACHE)).put("./index.html", net.clone()); }
+      return net;
+    })();
+    e.waitUntil(fromNet.catch(() => {})); // garde le SW en vie le temps du rafraîchissement
     e.respondWith((async () => {
       try {
-        const net = await fetch(req, {cache:"no-cache"});
-        if (net && net.ok) { (await caches.open(CACHE)).put("./index.html", net.clone()); }
-        return net;
+        return await Promise.race([
+          fromNet,
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))
+        ]);
       } catch (err) {
-        return (await caches.match("./index.html")) || (await caches.match("./")) || Response.error();
+        return (await caches.match("./index.html")) || (await caches.match("./")) || fromNet;
       }
     })());
     return;
