@@ -683,6 +683,13 @@
     </div>
 
     <div class="card">
+      <h2 style="font-size:18px;margin-bottom:4px">En-tête du récapitulatif imprimé</h2>
+      <p class="hint" style="margin:0 0 12px">Facultatif, et sans rapport avec le prénom ci-dessus : ces informations n'apparaissent que sur le récapitulatif imprimé ou partagé, pour que le document soit classé dans votre dossier médical. Laissez vide si vous n'en voulez pas.</p>
+      <input id="print-name" class="txt" placeholder="NOM Prénom (format dossier médical)" autocomplete="off" style="margin-bottom:8px">
+      <input id="print-dob" class="txt" type="date" aria-label="Date de naissance (facultative)">
+    </div>
+
+    <div class="card">
       <h2 style="font-size:18px;margin-bottom:10px">Apparence</h2>
       <div class="seg" id="theme-seg"></div>
       <div style="margin-top:14px"><div class="lbl">Taille du texte</div><div class="seg" id="bigtext-seg"></div></div>
@@ -713,14 +720,12 @@
     <div id="settings-body"></div>
 
     <div class="card">
-      <h2 style="font-size:18px;margin-bottom:10px">Code de verrouillage</h2>
-      <p class="sec-note">Protège l'ouverture par un code à 4 chiffres (sécurité légère).</p>
-      <div style="margin-top:16px"><div class="lbl">En-tête du récapitulatif imprimé (facultatif)</div>
-        <input id="print-name" class="txt" placeholder="NOM Prénom (format dossier médical)" autocomplete="off" style="margin-bottom:8px">
-        <input id="print-dob" class="txt" type="date" aria-label="Date de naissance (facultative)">
-        <p class="hint" style="margin-top:6px">Ces informations restent sur votre appareil et n'apparaissent que sur le récapitulatif imprimé ou partagé — utile pour que le document soit classé dans votre dossier médical. Laissez vide si vous n'en voulez pas.</p>
-      </div>
+      <h2 style="font-size:18px;margin-bottom:4px">Code de verrouillage</h2>
+      <p class="hint" style="margin:0 0 12px">Protège l'ouverture de l'application par un code à 4 chiffres (sécurité légère).</p>
       <div id="pin-area"></div>
+    </div>
+
+    <div class="card">
       <a class="danger-link" href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a>
       <button class="danger-link" id="report-issue">Signaler un problème</button>
       <button class="danger-link" id="show-wn">Voir les nouveautés de cette version</button>
@@ -844,7 +849,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="64";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="65";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
