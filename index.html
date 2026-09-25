@@ -599,7 +599,50 @@ svg:has(.hot.dragging) .halo{opacity:0;}
 .rg-step:last-child{border-radius:6px 14px 14px 6px;}
 .rg-step:active{transform:scale(.96);}
 .rg-step.on{box-shadow:inset 0 0 0 2px var(--ink);}
-.modal .rg-step{background:var(--line);}
+/* v67 : glisser sur la réglette. pan-y laisse défiler la feuille verticalement,
+   le glissement horizontal appartient à la réglette. Pendant le geste, la couleur
+   suit le doigt sans délai et la case courante se soulève légèrement. */
+.reglette{touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.reglette.scrub .rg-step{transition:transform 140ms var(--ease-out);}
+.reglette.scrub .rg-step:active{transform:none;}
+.reglette.scrub .rg-step.on{transform:scale(1.06,1.14);}
+/* v68 : la réglette devient une barre segmentée fine (lecture des crans) + une pastille
+   (le geste du curseur). Chaque cran reste un vrai bouton de 48 px de haut. */
+.reglette{position:relative;gap:3px;overflow:clip;overflow-clip-margin:14px;}
+.rg-step,.rg-step.on{position:relative;background:transparent;box-shadow:none;border-radius:0;}
+.rg-step:first-child,.rg-step:last-child{border-radius:0;}
+.rg-step::before{content:"";position:absolute;left:0;right:0;top:50%;height:12px;margin-top:-6px;border-radius:3px;background:var(--c,var(--line));transition:background-color 150ms ease;}
+.rg-step:first-child::before{border-radius:6px 3px 3px 6px;}
+.rg-step:last-child::before{border-radius:3px 6px 6px 3px;}
+.modal .rg-step{background:transparent;}
+.rg-step:active,.reglette.scrub .rg-step:active,.reglette.scrub .rg-step.on{transform:none;}
+.reglette.scrub .rg-step::before{transition:none;}
+.rg-rail{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform:translateX(calc(var(--p,0) * 100%));transition:transform 240ms var(--ease-out);}
+.reglette.scrub .rg-rail{transition:none;}
+.rg-thumb{position:absolute;left:0;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;box-sizing:border-box;border-radius:50%;background:var(--surface);border:3px solid var(--tc,var(--ink-soft));box-shadow:0 1px 2px rgba(20,14,26,.2),0 4px 12px rgba(20,14,26,.16);transition:transform 160ms var(--ease-out),border-color 150ms ease;}
+.reglette.scrub .rg-thumb{transform:scale(1.14);}
+html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.45);}
+.rg-nums span{transition:color 150ms ease;}
+/* ===== v70 : réglette « vivante » — uniquement transform / opacity / couleur ===== */
+/* La pastille se cale sur le cran avec un ressort discret (4 % de dépassement). */
+.rg-rail{transition:transform 260ms var(--ease-out);transition:transform 500ms linear(0, 0.048, 0.162, 0.306, 0.456, 0.597, 0.72, 0.82, 0.898, 0.955, 0.994, 1.019, 1.032, 1.038, 1.038, 1.035, 1.029, 1.024, 1.018, 1.013, 1.009, 1.005, 1.003, 1.001, 1, 0.999, 1);}
+.reglette.scrub .rg-rail{transition:none;}
+.reglette.sweep .rg-rail{transition:transform 460ms var(--ease-out);transition-delay:60ms;}
+/* Remplissage cran par cran (délai --d calculé en JS) */
+.rg-step::before{transition:background-color 180ms ease var(--d,0ms),transform 200ms var(--ease-out);}
+.reglette.sweep .rg-step::before{transition-delay:calc(var(--d,0ms) * 2.2 + 60ms);}
+/* Le cran courant s'épaissit légèrement sous la pastille */
+.rg-step.on::before{transform:scaleY(1.34);}
+/* Tenir la pastille : son cœur se remplit de la couleur de la valeur */
+.rg-thumb::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--tc,var(--ink-soft));opacity:0;transform:scale(.3);transition:opacity 140ms ease,transform 200ms var(--ease-out);}
+.reglette.scrub .rg-thumb::after{opacity:1;transform:scale(1);}
+/* Le chiffre choisi sous la barre se soulève */
+.rg-nums span{transition:color 150ms ease,transform 200ms var(--ease-out);}
+.rg-nums span.on{transform:translateY(-2px) scale(1.14);}
+/* Grand chiffre qui roule + mot d'intensité */
+.modal .mval{position:relative;height:66px;overflow:visible;}
+.fat-val{position:relative;display:inline-block;min-width:1.2em;text-align:right;}
+.mword{text-align:center;font-size:14px;color:var(--ink-soft);min-height:21px;margin-top:4px;}
 .rg-nums{display:flex;gap:4px;margin-top:6px;}
 .rg-nums span{flex:1 1 0;text-align:center;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
 .rg-nums span.on{color:var(--ink);font-weight:600;}
@@ -612,7 +655,15 @@ svg:has(.hot.dragging) .halo{opacity:0;}
 .modal{animation:none;border-radius:28px 28px 0 0;transform:translateY(100%);transition:transform 200ms var(--ease-out);}
 .modal-bg.show .modal{transform:none;transition:transform 320ms var(--ease-drawer);}
 @starting-style{.modal-bg.show{opacity:0;}.modal-bg.show .modal{transform:translateY(100%);}}
-.modal::before{content:"";display:block;width:38px;height:5px;border-radius:3px;background:var(--line);margin:-10px auto 16px;}
+.modal{position:relative;}
+.modal::before{content:none;}
+.sheet-grab{position:sticky;top:-22px;z-index:3;height:40px;margin:-22px -20px 2px;touch-action:none;cursor:grab;background:var(--surface);}
+.sheet-grab::after{content:"";position:absolute;left:50%;top:14px;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--line);}
+.sheet-x{position:absolute;top:22px;right:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:none;border-radius:12px;background:transparent;color:var(--ink-soft);cursor:pointer;transition:transform 160ms var(--ease-out),background-color 150ms ease;}
+.sheet-x:active{transform:scale(.94);}
+@media (hover:hover) and (pointer:fine){.sheet-x:hover{background:var(--surface-2);color:var(--ink);}}
+#modal-bg .modal h3{padding-right:48px;}
+#modal-cancel{padding:15px 20px;}
 .modal h3{font-size:24px;font-weight:500;}
 .modal .mval{font-size:64px;font-weight:500;line-height:1;margin-top:4px;color:var(--ink)!important;font-variant-numeric:lining-nums tabular-nums;}
 .scale-cue{font-size:12px;color:var(--ink-soft);margin-top:4px;}
@@ -625,7 +676,11 @@ svg:has(.hot.dragging) .halo{opacity:0;}
 .boot-name .boot-dot{transform:scale(.6);animation:bootDot2 .3s var(--ease-out) forwards;animation-delay:calc(var(--i)*.04s + .05s);}
 @keyframes bootDot2{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
 @media (prefers-reduced-motion:reduce){
-  .modal,.modal-bg,.modal-bg.show .modal,.snack,.hot,.halo,.chip,.btn,.fil button,.rg-step,.pain2{transition:none!important;}
+  .modal,.modal-bg,.modal-bg.show .modal,.snack,.hot,.halo,.chip,.btn,.fil button,.rg-step,.reglette.scrub .rg-step,.pain2{transition:none!important;}
+  .reglette.scrub .rg-step.on{transform:none;}
+  .rg-rail,.rg-thumb,.rg-thumb::after,.rg-step::before,.rg-nums span{transition:none!important;}
+  .rg-nums span.on,.rg-step.on::before{transform:none;}
+  .reglette.scrub .rg-thumb{transform:none;}
   .chip:active,.btn:active,.fil button:active,.rg-step:active,.pain2:active{transform:none;}
   .boot-name .boot-dot{animation:none;opacity:1;transform:none;}
 }
@@ -897,6 +952,7 @@ svg:has(.hot.dragging) .halo{opacity:0;}
 
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
+    <button type="button" class="sheet-x" id="modal-x" aria-label="Fermer sans rien noter"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <h3 id="modal-title">—</h3>
     <div class="mval" id="modal-val">0</div>
     <input type="range" min="0" max="10" step="1" value="0" id="modal-range">
@@ -906,7 +962,7 @@ svg:has(.hot.dragging) .halo{opacity:0;}
     <label class="bilat" id="modal-bilat-wrap" style="display:none"><input type="checkbox" id="modal-bilat"><span>Bilatéral — noter aussi à <b id="modal-bilat-side"></b></span></label>
     <div id="rap-moment-wrap" style="display:none;margin:10px 0 2px"><div class="lbl" style="margin-bottom:6px">Moment de la douleur</div><div class="seg" id="rap-moment"></div></div>
     <input type="text" class="pain-note show" id="modal-note" placeholder="Note (optionnel)…" style="margin-top:14px">
-    <div class="mbtns"><button class="btn btn-primary" id="modal-ok">OK</button></div>
+    <div class="mbtns"><button class="btn btn-ghost" id="modal-cancel">Annuler</button><button class="btn btn-primary" id="modal-ok" style="flex:1">OK</button></div>
   </div>
 </div>
 
@@ -997,7 +1053,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="66";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="72";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -1267,6 +1323,53 @@ function paintBodyMap(){
   });
   renderRibbon();
 }
+/* ===== v69 : feuilles — glisser vers le bas, bouton retour, Échap ===== */
+const SHEET_DISMISS={
+  "modal-bg":()=>dismissModal(),
+  "crise-bg":()=>document.getElementById("crise-cancel").click(),
+  "restore-bg":()=>document.getElementById("restore-cancel").click(),
+  "help-bg":()=>document.getElementById("help-ok").click(),
+  "wn-bg":()=>document.getElementById("wn-ok").click()
+};
+function dismissSheet(id){const f=SHEET_DISMISS[id];if(f)f();else{const b=document.getElementById(id);if(b)b.classList.remove("show");}}
+function openSheets(){return [...document.querySelectorAll(".modal-bg.show")];}
+let sheetStack=[],sheetPopping=false,sheetBackPending=0;
+function setupSheets(){
+  document.querySelectorAll(".modal-bg").forEach(bg=>{
+    const m=bg.querySelector(".modal");if(!m||m.querySelector(".sheet-grab"))return;
+    /* poignée : vraie zone de saisie de 40 px (touch-action:none), plus un simple dessin */
+    const grab=document.createElement("div");grab.className="sheet-grab";grab.setAttribute("aria-hidden","true");
+    m.prepend(grab);
+    let pid=null,y0=0,t0=0,dy=0;
+    grab.addEventListener("pointerdown",e=>{if(e.button>0)return;pid=e.pointerId;y0=e.clientY;t0=Date.now();dy=0;
+      try{grab.setPointerCapture(pid);}catch(_){} m.style.transition="none";});
+    grab.addEventListener("pointermove",e=>{if(e.pointerId!==pid)return;const d=e.clientY-y0;
+      dy=d>0?d:d*0.2; /* vers le haut : freinage, pas de mur */
+      m.style.transform="translateY("+dy+"px)";});
+    const end=e=>{if(e.pointerId!==pid)return;pid=null;
+      const v=Math.abs(dy)/Math.max(1,Date.now()-t0);
+      m.style.transition="";m.style.transform="";
+      if(dy>0&&(dy>m.offsetHeight*0.25||v>0.11))dismissSheet(bg.id);};
+    grab.addEventListener("pointerup",end);grab.addEventListener("pointercancel",end);
+    /* suivre ouverture / fermeture pour le bouton retour */
+    new MutationObserver(()=>{
+      const on=bg.classList.contains("show"), i=sheetStack.indexOf(bg.id);
+      if(on&&i<0){m.scrollTop=0; /* v70 : toujours rouvrir en haut, poignée visible */
+        sheetStack.push(bg.id);try{history.pushState({swanneSheet:bg.id},"");}catch(_){}}
+      else if(!on&&i>=0){sheetStack.splice(i,1);
+        if(sheetPopping)sheetPopping=false;
+        else{sheetBackPending++;try{history.back();}catch(_){sheetBackPending--;}}}
+    }).observe(bg,{attributes:true,attributeFilter:["class"]});
+  });
+  window.addEventListener("popstate",()=>{
+    if(sheetBackPending>0){sheetBackPending--;return;}
+    const id=sheetStack[sheetStack.length-1];
+    if(id){sheetPopping=true;dismissSheet(id);
+      /* si la feuille n'a pas pu se fermer, on remet l'état pour le prochain retour */
+      const bg=document.getElementById(id);if(bg&&bg.classList.contains("show")){sheetPopping=false;try{history.pushState({swanneSheet:id},"");}catch(_){}}}
+  });
+  document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;const o=openSheets();if(o.length)dismissSheet(o[o.length-1].id);});
+}
 /* ===== v66 : le fil des jours (remplace les flèches ‹ ›) ===== */
 function renderRibbon(){
   const el=document.getElementById("fil");if(!el)return;
@@ -1373,38 +1476,118 @@ function refreshPainValues(){
   });
 }
 /* ===== v66 : la réglette 0–10 (un toucher, pas de geste caché) ===== */
-function buildScale(min,max,onPick,label){
+function buildScale(min,max,onPick,label,getV){
   const box=document.createElement("div");box.className="rg";
   const g=document.createElement("div");g.className="reglette";g.setAttribute("role","group");g.setAttribute("aria-label",label);
   const nums=document.createElement("div");nums.className="rg-nums";nums.setAttribute("aria-hidden","true");
+  /* v67 : on peut toucher un chiffre OU glisser le doigt le long de la réglette.
+     La valeur suit le doigt case par case (petite vibration à chaque cran).
+     Si le geste devient un défilement vertical, la valeur de départ est rétablie. */
+  /* v68 : un curseur (rail + pastille) posé sur la réglette. Pendant le geste il suit
+     le doigt au pixel près ; au lâcher il glisse se caler au centre du cran choisi. */
+  let pid=null,last=null,startV=null,lastPtr=0;
+  const n=max-min+1, half=0.5/n;
+  const rail=document.createElement("div");rail.className="rg-rail";rail.setAttribute("aria-hidden","true");
+  const thumb=document.createElement("div");thumb.className="rg-thumb";rail.appendChild(thumb);
+  const fracAt=x=>{const r=g.getBoundingClientRect();return r.width?Math.max(0,Math.min(0.9999,(x-r.left)/r.width)):0;};
+  const follow=f=>{g.style.setProperty("--p",Math.max(half,Math.min(1-half,f)).toFixed(4));};
+  const stop=()=>{pid=null;g.classList.remove("scrub","moving");if(last!==null)g.style.setProperty("--p",((last-min+0.5)/n).toFixed(4));last=null;lastPtr=Date.now();};
+  g.addEventListener("pointerdown",e=>{
+    if(e.button>0)return;
+    pid=e.pointerId;startV=getV?getV():null;
+    try{g.setPointerCapture(pid);}catch(_){}
+    g.classList.add("scrub");
+    const f=fracAt(e.clientX);follow(f);
+    last=min+Math.floor(f*n);onPick(last);buzz(6);
+  });
+  g.addEventListener("pointermove",e=>{
+    if(e.pointerId!==pid)return;
+    const f=fracAt(e.clientX);follow(f);
+    const v=min+Math.floor(f*n);
+    if(v!==last){last=v;g.classList.add("moving");onPick(v);buzz(4);}
+  });
+  g.addEventListener("pointerup",e=>{if(e.pointerId===pid)stop();});
+  g.addEventListener("pointercancel",e=>{if(e.pointerId!==pid)return;if(startV!==null){onPick(startV);last=startV;}stop();});
+  g.addEventListener("lostpointercapture",e=>{if(e.pointerId===pid)stop();});
   for(let i=min;i<=max;i++){
     const b=document.createElement("button");b.type="button";b.className="rg-step";b.dataset.v=i;b.setAttribute("aria-label",i+" sur "+max);
-    b.onclick=()=>{buzz(6);onPick(i);};g.appendChild(b);
+    /* le clic « souris/doigt » est déjà traité au pointerdown ; celui-ci sert au clavier */
+    b.onclick=()=>{if(Date.now()-lastPtr<600)return;buzz(6);onPick(i);};g.appendChild(b);
     const s=document.createElement("span");s.dataset.v=i;s.textContent=i;nums.appendChild(s);
   }
+  g.appendChild(rail);
   box.append(g,nums);return box;
 }
 function paintScale(box,v,colorOf){
   if(!box)return;
-  box.querySelectorAll(".rg-step").forEach(b=>{const i=+b.dataset.v, on=i===v;
-    b.style.background=(i>0&&i<=v)?colorOf(i):"";b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");});
+  const g=box.querySelector(".reglette"), steps=box.querySelectorAll(".rg-step");
+  /* v70 : au toucher, les crans se remplissent (ou se vident) l'un après l'autre en
+     partant de l'ancienne valeur, 14 ms d'écart ; pendant un glissement, aucun délai. */
+  const prev=box._v===undefined?v:box._v, scrub=g&&g.classList.contains("scrub");
+  box._v=v;
+  steps.forEach(b=>{const i=+b.dataset.v, on=i===v;
+    b.style.setProperty("--d",scrub?"0ms":(Math.min(10,Math.abs(i-prev))*14)+"ms");
+    if(i>0&&i<=v)b.style.setProperty("--c",colorOf(i));else b.style.removeProperty("--c");
+    b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");});
+  if(g&&steps.length){
+    const min=+steps[0].dataset.v, n=steps.length;
+    if(!g.classList.contains("scrub"))g.style.setProperty("--p",((v-min+0.5)/n).toFixed(4));
+    g.style.setProperty("--tc",v>0?colorOf(v):"var(--ink-soft)");
+  }
   box.querySelectorAll(".rg-nums span").forEach(s=>s.classList.toggle("on",+s.dataset.v===v));
 }
+/* ===== v70 : chiffre qui « roule » et mot d'intensité ===== */
+const REDUCED=()=>!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+/* v72 : plus de flou, plus de double chiffre. Le chiffre change sur place et « respire » :
+   il réapparaît en fondu (opacité seule, 220 ms), sans ancien chiffre fantôme.
+   Pendant un glissement, aucune animation : le chiffre suit le doigt instantanément. */
+function rollNumber(el,txt){
+  if(!el)return;
+  txt=String(txt);
+  const prev=el.dataset.v;el.dataset.v=txt;
+  if(prev===txt&&el.textContent===txt)return;
+  if(el.getAnimations)el.getAnimations().forEach(a=>a.cancel());
+  el.textContent=txt;
+  if(prev===undefined||REDUCED()||!el.animate||document.querySelector(".reglette.moving"))return;
+  el.animate([{opacity:.25},{opacity:1}],{duration:220,easing:"cubic-bezier(.33,1,.68,1)"});
+}
+/* Repères usuels de l'échelle numérique : 1–3 légère, 4–6 modérée, 7–9 sévère. */
+function painWord(v){return v<=0?"aucune douleur":v<=3?"douleur légère":v<=6?"douleur modérée":v<=9?"douleur sévère":"douleur insupportable";}
+function setWord(el,txt){
+  if(!el||el.textContent===txt)return;
+  el.textContent=txt;
+  if(el.getAnimations)el.getAnimations().forEach(a=>a.cancel());
+  if(!REDUCED()&&el.animate&&!document.querySelector(".reglette.moving"))el.animate([{opacity:.25},{opacity:1}],{duration:220,easing:"cubic-bezier(.33,1,.68,1)"});
+}
 /* Pilote un <input type=range> existant : le range reste la source de vérité (code v65 inchangé). */
-function mountRangeScale(range){
+function mountRangeScale(range,valEl){
   if(!range||range._paintScale)return;
   const min=+range.min||0,max=+range.max||10;
-  const box=buildScale(min,max,v=>{range.value=v;range.dispatchEvent(new Event("input",{bubbles:true}));},"Intensité de "+min+" à "+max);
+  const box=buildScale(min,max,v=>{if(+range.value===v)return;range.value=v;range.dispatchEvent(new Event("input",{bubbles:true}));},"Intensité de "+min+" à "+max,()=>+range.value);
   range.classList.add("rg-hidden");range.after(box);
-  const paint=()=>paintScale(box,+range.value,intensityColor);
-  range.addEventListener("input",paint);range._paintScale=paint;paint();
+  let word=null;
+  if(valEl){word=document.createElement("div");word.className="mword";word.setAttribute("aria-live","polite");valEl.after(word);}
+  const paint=()=>{paintScale(box,+range.value,intensityColor);if(word)setWord(word,painWord(+range.value));};
+  range.addEventListener("input",()=>{paint();if(valEl)rollNumber(valEl,range.value);});
+  range._paintScale=paint;
+  /* À l'ouverture de la feuille : la barre se remplit jusqu'à la valeur pendant que la
+     feuille monte (une seule fois par ouverture, pas pendant la saisie). */
+  range._openSweep=()=>{
+    if(valEl){valEl.dataset.v=range.value;valEl.textContent=range.value;}
+    if(word){word.textContent=painWord(+range.value);}
+    if(REDUCED()||+range.value<=min){box._v=undefined;paint();return;}
+    box._v=undefined;paintScale(box,min,intensityColor);
+    const g=box.querySelector(".reglette");g.classList.add("sweep");
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{paint();setTimeout(()=>g.classList.remove("sweep"),520);}));
+  };
+  paint();
 }
 function fatigueColor(i){return lerpHex(intensityDark()?"#3A3345":"#D9CDE3",intensityDark()?"#C4ACD4":"#5A4067",i/10);}
 function buildFatigue(){
   const wrap=document.getElementById("fatigue-row"); if(!wrap)return; wrap.innerHTML="";
   const head=document.createElement("div");head.className="fat-head";
   head.innerHTML='<span>Fatigue ressentie</span><span class="fat-val" id="fat-val">—</span>';
-  const box=buildScale(0,10,v=>{if(v>0)entry.fatigue=v;else delete entry.fatigue;refreshFatigue();},"Fatigue de 0 à 10");
+  const box=buildScale(0,10,v=>{if(v>0)entry.fatigue=v;else delete entry.fatigue;refreshFatigue();},"Fatigue de 0 à 10",()=>entry.fatigue||0);
   box.id="fat-scale";
   const cue=document.createElement("div");cue.className="scale-cue";cue.innerHTML="<span>aucune</span><span>épuisement</span>";
   wrap.append(head,box,cue);
@@ -1412,7 +1595,7 @@ function buildFatigue(){
 }
 function refreshFatigue(){
   const v=entry.fatigue||0, val=document.getElementById("fat-val");
-  if(val)val.textContent=v>0?v:"—";
+  if(val)rollNumber(val,v>0?v:"—");
   paintScale(document.getElementById("fat-scale"),v,fatigueColor);
 }
 function buildChips(containerId,keys,field){
@@ -1543,8 +1726,8 @@ function openCrise(){
   document.getElementById("crise-time").value=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
   const r=document.getElementById("crise-range"),v=document.getElementById("crise-val");
   r.value=5;v.textContent=5;v.style.color=intensityColor(5);
-  r.oninput=()=>{v.textContent=r.value;v.style.color=intensityColor(+r.value);};
-  mountRangeScale(r);r._paintScale();
+  r.oninput=()=>{v.style.color=intensityColor(+r.value);}; /* v71 : le texte du chiffre est géré par rollNumber */
+  mountRangeScale(r,v);r._openSweep();
   document.getElementById("crise-note").value="";criseZones=[];
   const zc=document.getElementById("crise-zones");zc.innerHTML="";
   CFG.pains.filter(k=>BODY_KEYS.includes(k)).forEach(k=>{const b=document.createElement("button");b.className="chip";b.textContent=labelOf(k);b.onclick=()=>{const i=criseZones.indexOf(k);if(i>=0)criseZones.splice(i,1);else criseZones.push(k);b.classList.toggle("on",criseZones.includes(k));};zc.appendChild(b);});
@@ -1657,9 +1840,30 @@ function openModal(k){
       seg.querySelectorAll(".chip").forEach(b=>{b.onclick=()=>{modalMoment=b.dataset.k;seg.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===b));};});
     } else { rw.style.display="none"; modalMoment=""; }
   }
-  r.oninput=()=>{v.textContent=r.value;v.style.color=intensityColor(+r.value);};
-  mountRangeScale(r);r._paintScale();
+  r.oninput=()=>{v.style.color=intensityColor(+r.value);}; /* v71 : le texte du chiffre est géré par rollNumber */
+  mountRangeScale(r,v);r._openSweep();
+  if(!r._okHook){r._okHook=true;r.addEventListener("input",paintModalOk);}
+  paintModalOk();modalSnap=modalState();
   document.getElementById("modal-bg").classList.add("show");
+}
+/* v69 : fermer sans rien changer. Rien n'est écrit dans entry avant closeModal(),
+   donc annuler = simplement masquer la feuille. */
+let modalSnap=null;
+function modalState(){
+  const r=document.getElementById("modal-range"),n=document.getElementById("modal-note"),bc=document.getElementById("modal-bilat");
+  return JSON.stringify([+r.value,n.value,modalTypes,!!(bc&&bc.checked),modalMoment]);
+}
+function cancelModal(){
+  document.getElementById("modal-bg").classList.remove("show");
+  modalKey=null;modalMirror=null;modalSnap=null;
+}
+/* Toucher à côté, glisser vers le bas, bouton retour : si rien n'a été modifié on ferme
+   sans rien écrire ; si quelque chose a été modifié on garde la saisie (comportement v65). */
+function dismissModal(){ if(modalSnap!==null&&modalState()===modalSnap)cancelModal(); else closeModal(); }
+function paintModalOk(){
+  const b=document.getElementById("modal-ok");if(!b)return;
+  const v=+document.getElementById("modal-range").value, had=modalKey&&entry.pains[modalKey]>0;
+  b.textContent=v>0?("Noter "+v+" sur 10"):(had?"Retirer cette douleur":"Aucune douleur");
 }
 function closeModal(){
   const r=document.getElementById("modal-range"),n=document.getElementById("modal-note"),v=+r.value;
@@ -1681,7 +1885,7 @@ function closeModal(){
   }
   document.getElementById("modal-bg").classList.remove("show");
   paintBodyMap();refreshPainValues();
-  modalKey=null;modalMirror=null;
+  modalKey=null;modalMirror=null;modalSnap=null;
 }
 
 /* ===== Navigation date ===== */
@@ -2523,10 +2727,13 @@ function toggleCard(card,key){
 }
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
 const WHATSNEW=[
+ "Réglette plus vivante : le chiffre suit le doigt et s'affiche en douceur, la barre se remplit cran par cran, le curseur se cale en douceur, et un mot résume l'intensité (légère, modérée, sévère).",
+ "Fenêtre ouverte par erreur ? Fermez-la sans rien noter : croix, bouton Annuler, glisser vers le bas ou bouton retour du téléphone.",
+ "Réglette repensée : une barre graduée et un curseur qui suit votre doigt, puis se cale sur le chiffre choisi. Un simple toucher fonctionne aussi.",
  "Nouveau visage : une interface plus calme, des rubriques séparées par de simples filets.",
  "Le fil des jours en haut de l'écran : un coup d'œil sur les 9 derniers jours, un toucher pour changer de jour.",
  "La silhouette montre chaque douleur comme une tache de couleur, plus grande et plus foncée quand elle est forte.",
- "Fini le « maintenir puis glisser » : l'intensité et la fatigue se notent d'un simple toucher sur une réglette de 0 à 10.",
+ "L'intensité et la fatigue se notent sur une réglette de 0 à 10, sans geste caché.",
  "Toutes vos données et vos zones personnalisées sont conservées."
 ];
 function openWhatsNew(){
@@ -2622,7 +2829,10 @@ async function init(){
   document.querySelectorAll("#pain-mode button").forEach(b=>b.onclick=()=>{curPainMode=b.dataset.mode;document.querySelectorAll("#pain-mode button").forEach(x=>x.classList.toggle("on",x===b));document.getElementById("bodymap-wrap").style.display=curPainMode==="map"?"block":"none";syncForm();});
 
   document.getElementById("modal-ok").onclick=closeModal;
-  document.getElementById("modal-bg").onclick=e=>{if(e.target.id==="modal-bg")closeModal();};
+  document.getElementById("modal-bg").onclick=e=>{if(e.target.id==="modal-bg")dismissModal();};
+  document.getElementById("modal-x").onclick=cancelModal;
+  document.getElementById("modal-cancel").onclick=cancelModal;
+  setupSheets();
 
   document.querySelectorAll("#range-pick button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#range-pick button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderTrack();});
   document.querySelectorAll("#doc-range-pick button").forEach(b=>b.onclick=()=>{if(b.dataset.mode==="rdv"&&!CFG.lastAppt){toast("Renseignez la date du dernier rendez-vous dans les Réglages.");return;}document.querySelectorAll("#doc-range-pick button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderDoc();});
