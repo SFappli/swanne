@@ -1053,8 +1053,8 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="72";let BOOT_T=Date.now();let trendZone="";
-let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
+const SCHEMA=9;const APP_VERSION="73";let BOOT_T=Date.now();let trendZone="";
+let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
   async get(k){const db=await this.open();if(!db)return null;return new Promise(res=>{const t=db.transaction("kv").objectStore("kv").get(k);t.onsuccess=()=>res(t.result??null);t.onerror=()=>res(null);});},
@@ -1079,12 +1079,15 @@ async function saveData(){return await rawSet(STORE_KEY,JSON.stringify(DATA));}
 async function saveConfig(){return await rawSet(CONFIG_KEY,JSON.stringify(CFG));}
 async function loadConfig(){
   const v=await rawGet(CONFIG_KEY); let c=null; try{c=v?JSON.parse(v):null;}catch(e){c=null;}
-  if(!c){c={pains:DEF_PAINS.map(x=>x[0]),dig:DEF_DIG.map(x=>x[0]),gen:DEF_GEN.map(x=>x[0]),fog:DEF_FOG.map(x=>x[0]),food:DEF_FOOD.map(x=>x[0]),ptypes:DEF_PTYPES.map(x=>x[0]),labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"auto",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};[...DEF_PAINS,...DEF_DIG,...DEF_GEN,...DEF_FOG,...DEF_FOOD,...DEF_PTYPES].forEach(([k,l])=>c.labels[k]=l);c.labels.dyspareunie="Après les rapports";CFG=c;await saveConfig();}
-  else{c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.labels=c.labels||{};c.treatments=c.treatments||[];c.theme=c.theme||"auto";c.pin=c.pin||"";c.lastBackup=c.lastBackup||"";c.name=c.name||"";CFG=c;migrate();}
+  if(!c){c={pains:DEF_PAINS.map(x=>x[0]),dig:DEF_DIG.map(x=>x[0]),gen:DEF_GEN.map(x=>x[0]),fog:DEF_FOG.map(x=>x[0]),food:DEF_FOOD.map(x=>x[0]),ptypes:DEF_PTYPES.map(x=>x[0]),labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};[...DEF_PAINS,...DEF_DIG,...DEF_GEN,...DEF_FOG,...DEF_FOOD,...DEF_PTYPES].forEach(([k,l])=>c.labels[k]=l);c.labels.dyspareunie="Après les rapports";CFG=c;await saveConfig();}
+  else{c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.labels=c.labels||{};c.treatments=c.treatments||[];c.theme=(c.theme==="dark")?"dark":"light";c.pin=c.pin||"";c.lastBackup=c.lastBackup||"";c.name=c.name||"";CFG=c;migrate();}
   CFG.labels.regles="Règles";CFG.labels.spotting="Spotting";
 }
 function migrate(){
   let changed=false;
+  /* Le mode "Auto" a été retiré (il basculait à tort en sombre) : on bascule
+     les profils qui l'utilisaient sur le thème clair. */
+  if(CFG.theme!=="light"&&CFG.theme!=="dark"){CFG.theme="light";changed=true;}
   if(CFG.questions===undefined){CFG.questions=[];changed=true;}
   if(CFG.appointment===undefined){CFG.appointment="";changed=true;}
   if(CFG.lastAppt===undefined){CFG.lastAppt="";changed=true;}
@@ -2030,7 +2033,7 @@ function fillSetList(cat){
 }
 function renderTheme(){
   const seg=document.getElementById("theme-seg");
-  seg.innerHTML=[["auto","Auto"],["light","Clair"],["dark","Sombre"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
+  seg.innerHTML=[["light","Clair"],["dark","Sombre"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
   seg.querySelectorAll(".chip").forEach(b=>{b.classList.toggle("on",b.dataset.k===CFG.theme);b.onclick=async()=>{CFG.theme=b.dataset.k;await saveConfig();applyTheme();renderTheme();};});
   const bt=document.getElementById("bigtext-seg");
   if(bt){bt.innerHTML=[["off","Normal"],["on","Grand"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
@@ -2046,8 +2049,9 @@ function renderPin(){
   else{area.innerHTML=`<div class="add-row"><input type="password" inputmode="numeric" maxlength="4" class="txt" id="pin-set" placeholder="4 chiffres"><button class="btn-add" id="pin-save">Activer</button></div>`;document.getElementById("pin-save").onclick=async()=>{const v=document.getElementById("pin-set").value;if(!/^\d{4}$/.test(v)){toast("Entrez 4 chiffres");return;}CFG.pin=v;await saveConfig();renderPin();toast("Code activé");};}
 }
 function applyTheme(){
-  let t=CFG.theme;
-  if(t==="auto")t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+  /* Deux thèmes seulement : clair (défaut) ou sombre. Toute autre valeur
+     — dont l'ancien "auto", supprimé — retombe sur le thème clair. */
+  const t=(CFG.theme==="dark")?"dark":"light";
   document.documentElement.setAttribute("data-theme",t);
   /* v66 : les couleurs d'intensité dépendent du thème */
   try{if(document.getElementById("fil")){paintBodyMap();refreshPainValues();refreshFatigue();}}catch(e){}
@@ -2547,7 +2551,7 @@ function importData(file){
   r.onerror=()=>toast("Lecture du fichier impossible");
   r.readAsText(file);
 }
-function normalizeCfg(c){c.labels=c.labels||{};c.labels.regles="Règles";c.labels.spotting="Spotting";c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.treatments=c.treatments||[];c.questions=c.questions||[];c.theme=c.theme||"auto";c.name=c.name||"";c.onboarded=true;c.appointment=c.appointment||"";c.pin=(c.pin!==undefined?c.pin:CFG.pin)||"";c.lastBackup=c.lastBackup||CFG.lastBackup||"";c.version=SCHEMA;return c;}
+function normalizeCfg(c){c.labels=c.labels||{};c.labels.regles="Règles";c.labels.spotting="Spotting";c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.treatments=c.treatments||[];c.questions=c.questions||[];c.theme=(c.theme==="dark")?"dark":"light";c.name=c.name||"";c.onboarded=true;c.appointment=c.appointment||"";c.pin=(c.pin!==undefined?c.pin:CFG.pin)||"";c.lastBackup=c.lastBackup||CFG.lastBackup||"";c.version=SCHEMA;return c;}
 function mergeCfg(c){Object.assign(CFG.labels,c.labels||{});CFG.labels.regles="Règles";CFG.labels.spotting="Spotting";["pains","dig","gen","fog","food","ptypes"].forEach(cat=>{CFG[cat]=CFG[cat]||[];(c[cat]||[]).forEach(k=>{if(!CFG[cat].includes(k))CFG[cat].push(k);});});(c.treatments||[]).forEach(t=>{if(t&&t.id&&!CFG.treatments.some(x=>x.id===t.id))CFG.treatments.push(t);});(c.questions||[]).forEach(q=>{if(q&&q.id&&!CFG.questions.some(x=>x.id===q.id))CFG.questions.push(q);});if(!CFG.name&&c.name)CFG.name=c.name;if(!CFG.driveClientId&&c.driveClientId)CFG.driveClientId=c.driveClientId;if(!CFG.appointment&&c.appointment)CFG.appointment=c.appointment;}
 function refreshSuiviIfOpen(){if(document.getElementById("view-suivi").classList.contains("on"))renderSuiviSub();}
 async function applyRestore(mode){
@@ -2779,7 +2783,6 @@ async function shareRecap(){
 }
 async function init(){
   await loadConfig();applyTheme();applyBigText();
-  if(window.matchMedia){window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if(CFG.theme==="auto")applyTheme();});}
   installManifest();
   DATA=await loadData();
   buildForm();setDate(todayStr());setupCards();
