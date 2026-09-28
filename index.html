@@ -1075,7 +1075,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="75";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="76";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
@@ -2228,7 +2228,8 @@ function treatStats(t,dates){
   if(t.start){
     let bSum=0,bN=0,aSum=0,aN=0;const b0=addDays(t.start,-30),a1=addDays(t.start,30);
     Object.keys(DATA).forEach(ds=>{const e=DATA[ds];if(!e)return;const mp=dayMaxPain(e);if(ds>=b0&&ds<t.start){bSum+=mp;bN++;}else if(ds>=t.start&&ds<a1){aSum+=mp;aN++;}});
-    if(bN>=3&&aN>=3)resp={before:bSum/bN,after:aSum/aN};
+    const inRange=dates.length?(t.start>=dates[0]&&t.start<=dates[dates.length-1]):false;
+    if(bN>=3&&aN>=3&&inRange)resp={before:bSum/bN,after:aSum/aN};
   }
   return {obs,resp};
 }
@@ -2240,7 +2241,7 @@ function aggregate(days,offset){
   const starts=cycleStarts();
   const medLen=medianCycleLen(starts);
   let activeDays=0,painDays=0,periodDays=0,spottingDays=0,loggedDays=0,sumMax=0,maxCnt=0,crisisCount=0,crisisDays=0;
-  let badSleepPain=0,badSleepDays=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,criseISum=0,criseICnt=0,rapPend=0,rapApres=0,rapDeux=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0,protSum=0,protCnt=0,protMax=0,caillotsDays=0,inondDays=0,absenceDays=0,medTakes={},medDaysTaken={},painFreeDays=0;
+  let badSleepPain=0,badSleepDays=0,badSleepSum=0,badSleepCnt=0,okSleepSum=0,okSleepCnt=0,fatSum=0,fatCnt=0,fogFreq={},fogDays=0,impactFreq={},moodFreq={},regPainSum=0,regPainCnt=0,nonRegPainSum=0,nonRegPainCnt=0,sevDays=0,criseISum=0,criseICnt=0,rapPend=0,rapApres=0,rapDeux=0,meteoFreq={},hotSum=0,hotCnt=0,coolSum=0,coolCnt=0,stressHiSum=0,stressHiCnt=0,stressLoSum=0,stressLoCnt=0,protSum=0,protCnt=0,protMax=0,caillotsDays=0,inondDays=0,absenceDays=0,medTakes={},medDaysTaken={},painFreeDays=0;
   dates.forEach(ds=>{const e=DATA[ds];let any=false;if(e){loggedDays++;
     const pk=Object.keys(e.pains||{});
     pk.forEach(k=>{const v=e.pains[k];freq[k]=(freq[k]||0)+1;isum[k]=(isum[k]||0)+v;icnt[k]=(icnt[k]||0)+1;painKeys.add(k);any=true;});
@@ -2269,13 +2270,14 @@ function aggregate(days,offset){
     if(ph){phasePain[ph]=(phasePain[ph]||0)+mx;phaseCnt[ph]=(phaseCnt[ph]||0)+1;}
     if(cd!==null){cycleDayPain[cd]=(cycleDayPain[cd]||0)+mx;cycleDayCnt[cd]=(cycleDayCnt[cd]||0)+1;}
     if(e.ctx&&e.ctx.sommeil==="mal"){badSleepDays++;if(mx>=6)badSleepPain++;}
+    if(e.ctx&&e.ctx.sommeil&&!e.regles){if(e.ctx.sommeil==="mal"){badSleepSum+=mx;badSleepCnt++;}else{okSleepSum+=mx;okSleepCnt++;}}
     if(mx>=6)sevDays++;
     if((e.pains&&e.pains.rapports)||(e.gen||[]).includes("dyspareunie")){const rm=e.rapportsMoment||(((e.gen||[]).includes("dyspareunie"))?((e.pains&&e.pains.rapports)?"deux":"apres"):"pendant");if(rm==="pendant")rapPend++;else if(rm==="apres")rapApres++;else if(rm==="deux")rapDeux++;}
     if(e.ctx&&e.ctx.stress&&!e.regles){if(e.ctx.stress==="eleve"){stressHiSum+=mx;stressHiCnt++;}else{stressLoSum+=mx;stressLoCnt++;}}
     if(e.ctx&&e.ctx.meteo){meteoFreq[e.ctx.meteo]=(meteoFreq[e.ctx.meteo]||0)+1;if(!e.regles){if(e.ctx.meteo==="chaud"){hotSum+=mx;hotCnt++;}else{coolSum+=mx;coolCnt++;}}}
     if(any)activeDays++;
   }});
-  return {protSum,protCnt,protMax,caillotsDays,inondDays,absenceDays,medTakes,medDaysTaken,painFreeDays,dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,sevDays,criseISum,criseICnt,rapPend,rapApres,rapDeux,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
+  return {protSum,protCnt,protMax,caillotsDays,inondDays,absenceDays,medTakes,medDaysTaken,painFreeDays,dates,freq,isum,icnt,painKeys,phasePain,phaseCnt,cycleDayPain,cycleDayCnt,reliefStat,medStat,typeFreq,typeByPain,fatSum,fatCnt,fogFreq,fogDays,impactFreq,moodFreq,regPainSum,regPainCnt,nonRegPainSum,nonRegPainCnt,activeDays,painDays,periodDays,spottingDays,loggedDays,avgMax:maxCnt?sumMax/maxCnt:0,badSleepDays,badSleepPain,badSleepSum,badSleepCnt,okSleepSum,okSleepCnt,sevDays,criseISum,criseICnt,rapPend,rapApres,rapDeux,meteoFreq,hotSum,hotCnt,coolSum,coolCnt,stressHiSum,stressHiCnt,stressLoSum,stressLoCnt,crisisCount,crisisDays,total:dates.length};
 }
 const topFreq=(A,n)=>Object.entries(A.freq).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
@@ -2469,7 +2471,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const reliefLine=totR?`<div class="rp-treat" style="margin-top:10px"><span class="rp-pill ok"><b>${r.oui||0}</b>soulagé</span><span class="rp-pill mid"><b>${r.peu||0}</b>un peu</span><span class="rp-pill no"><b>${r.non||0}</b>sans effet</span></div>`:"";
   const treatSec=(treatTable||reliefLine)?`<section class="rp-sec"><h3>Traitements</h3>${treatTable?'<p class="rp-cap">Dosage, période, efficacité ressentie et effets secondaires.</p>'+treatTable:""}${reliefLine?`<p class="rp-cap" style="margin-top:14px">Sur les prises notées durant la période :</p>${reliefLine}`:""}</section>`:"";
   // sommeil
-  const sleepSec=A.badSleepDays>=4?`<section class="rp-sec"><h3>Sommeil & douleur</h3><p class="rp-prose">Sur ${A.badSleepDays} nuit(s) de mauvais sommeil, ${A.badSleepPain} ont coïncidé avec une douleur forte (≥ 6/10).</p></section>`:"";
+  const sleepSec=(A.badSleepCnt>=5&&A.okSleepCnt>=5)?`<section class="rp-sec"><h3>Sommeil &amp; douleur</h3><p class="rp-prose">Hors jours de règles : après une <b>mauvaise nuit</b>, douleur moyenne <b>${(A.badSleepSum/A.badSleepCnt).toFixed(1).replace(".",",")}/10</b>, contre <b>${(A.okSleepSum/A.okSleepCnt).toFixed(1).replace(".",",")}/10</b> après une nuit correcte. <span style="color:var(--ink-faint)">(${A.badSleepCnt} j vs ${A.okSleepCnt} j)</span> Observation indicative : le sens de la relation n'est pas établi.</p></section>`:"";
   const meteoSec=(A.hotCnt>=5&&A.coolCnt>=5)?`<section class="rp-sec"><h3>Chaleur &amp; douleur</h3><p class="rp-prose">Hors jours de règles : les jours de <b>forte chaleur</b>, douleur moyenne <b>${(A.hotSum/A.hotCnt).toFixed(1).replace(".",",")}/10</b>, contre <b>${(A.coolSum/A.coolCnt).toFixed(1).replace(".",",")}/10</b> les jours tempérés ou froids. <span style="color:var(--ink-faint)">(${A.hotCnt} j vs ${A.coolCnt} j)</span></p></section>`:"";
   // comparaison
   const cmpRows=`<div class="cmp">
