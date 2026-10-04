@@ -729,6 +729,7 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
     <input type="text" id="wc-name" class="txt" placeholder="Votre prénom (facultatif)" maxlength="30" autocomplete="off">
     <button class="btn btn-primary" id="wc-start" style="width:100%;margin-top:18px">Commencer</button>
     <p class="wc-fine">Vous pourrez le modifier à tout moment dans les réglages.</p>
+    <p class="wc-fine" style="margin-top:22px;line-height:1.5">Swanne. n’est pas un dispositif médical et ne pose aucun diagnostic. Pour tout avis médical, diagnostic ou traitement, consultez un professionnel de santé.<br><a href="confidentialite.html" target="_blank" rel="noopener" style="color:var(--aubergine)">Politique de confidentialité</a></p>
   </div>
 </div>
 
@@ -794,7 +795,7 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
 
     <div class="card" data-card="food">
       <h2>Alimentation</h2>
-      <p style="font-size:13px;color:var(--ink-soft);margin:8px 0 0">Ce qui pourrait jouer aujourd'hui (plusieurs choix possibles).</p>
+      <p style="font-size:13px;color:var(--ink-soft);margin:8px 0 0">Ce que vous avez consommé aujourd'hui (plusieurs choix possibles).</p>
       <div class="chips" id="food-chips" style="margin-top:12px"></div>
     </div>
 
@@ -840,7 +841,7 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
 
     <div class="card" data-card="ctx">
       <h2>Contexte</h2>
-      <p class="sec-note">Ces facteurs aident à repérer ce qui influence les crises.</p>
+      <p class="sec-note">Le récapitulatif compare vos journées selon ces éléments, à&nbsp;titre&nbsp;indicatif.</p>
       <div class="ctx-grid">
         <div><div class="lbl">Sommeil</div><div class="seg" id="ctx-sommeil"></div></div>
         <div><div class="lbl">Stress</div><div class="seg" id="ctx-stress"></div></div>
@@ -899,7 +900,7 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
         <div id="q-list"></div>
         <div class="add-row" style="margin-top:10px"><input type="text" class="txt" id="q-add" placeholder="Ajouter une question…" maxlength="140"><button class="btn-add" id="q-add-btn">Ajouter</button></div>
       </div>
-      <div class="footnote">Ce carnet est une aide au suivi et au dialogue avec les soignants. Il ne remplace pas un avis médical.</div>
+      <div class="footnote">Ce carnet est une aide au suivi et au dialogue avec les soignants. Il ne remplace pas un avis médical : pour tout diagnostic ou traitement, consultez un professionnel de santé.</div>
       <div class="data-tools">
         <button id="share-btn">Sauvegarder mes données</button>
         <button id="csv-btn">Export tableur (.csv)</button>
@@ -1056,7 +1057,7 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
       <h4>Pour le médecin</h4>
       <div class="help-row"><span class="g">Mon suivi</span><span>→ « Récapitulatif » : un résumé clair à imprimer ou à montrer en consultation.</span></div>
     </div>
-    <p class="wc-fine" style="text-align:left;margin-top:14px">Swanne. est un outil de suivi personnel et ne remplace pas un avis médical.</p>
+    <p class="wc-fine" style="text-align:left;margin-top:14px">Swanne. est un outil de suivi personnel. Ce n’est pas un dispositif médical : il ne diagnostique, ne traite, ne guérit ni ne prévient aucune maladie. Pour tout avis médical, diagnostic ou traitement, consultez un professionnel de santé.</p>
     <div class="mbtns"><button class="btn btn-primary" id="help-ok">J'ai compris</button></div>
   </div>
 </div>
@@ -1087,7 +1088,7 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=9;const APP_VERSION="79";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=9;const APP_VERSION="80";let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
