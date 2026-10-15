@@ -4,8 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#5A4067">
+<script>/* thème choisi dans Réglages, appliqué dès le premier affichage (pas d'éclair clair en thème sombre) */
+(function(){try{var c=JSON.parse(localStorage.getItem("repere-config-v1")||"null");if(c&&c.theme==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}})();</script>
 <script>/* Lancement depuis l'appli installée (Play Store / écran d'accueil) : Android a déjà affiché son écran de lancement. */
-(function(){try{var tw=document.referrer.indexOf("android-app://")===0,ss=false;try{if(tw)sessionStorage.setItem("swanne-shell","1");ss=sessionStorage.getItem("swanne-shell")==="1";}catch(e){}
+(function(){try{if(window.SwNative){document.documentElement.classList.add("native");window.__bootNative=true;return;}
+var tw=document.referrer.indexOf("android-app://")===0,ss=false;try{if(tw)sessionStorage.setItem("swanne-shell","1");ss=sessionStorage.getItem("swanne-shell")==="1";}catch(e){}
 var mm=function(q){return !!(window.matchMedia&&window.matchMedia(q).matches);};
 if(tw||ss||mm("(display-mode: standalone)")||mm("(display-mode: fullscreen)")||mm("(display-mode: minimal-ui)")||navigator.standalone===true){document.documentElement.classList.add("app-shell");window.__bootPlain=true;}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -210,15 +213,17 @@ if(tw||ss||mm("(display-mode: standalone)")||mm("(display-mode: fullscreen)")||m
 
   .tedit{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:var(--surface-2);}
   .tedit .te-name{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;font-size:15px;font-weight:600;background:var(--surface);color:var(--ink);margin-bottom:8px;}
-  .tedit .te-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .tedit .te-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  @media (max-width:359px){.tedit .te-grid{grid-template-columns:minmax(0,1fr);}} /* v90 : petits écrans ou grande police */
   .tedit .te-field{display:flex;flex-direction:column;gap:3px;}
   .tedit .te-field.full{grid-column:1 / -1;}
   .tedit .te-field label{font-size:11px;color:var(--ink-faint);font-weight:600;letter-spacing:.02em;}
-  .tedit .te-field input,.tedit .te-field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);}
+  .tedit .te-field input,.tedit .te-field select{width:100%;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);}
   .tedit .te-del{margin-top:9px;background:none;border:none;color:var(--rose);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:4px 2px;}
   .rp-ttable{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px;}
   .rp-ttable th{text-align:left;font-weight:600;color:var(--ink-soft);border-bottom:1px solid var(--line);padding:6px 8px 6px 0;font-size:12.5px;}
   .rp-ttable td{border-bottom:1px solid var(--line);padding:7px 8px 7px 0;vertical-align:top;}
+  .rp-ttable td,.rp-ttable th{overflow-wrap:anywhere;}
   .rp-ttable .te-eff{font-family:"Newsreader",serif;font-weight:600;}
   .rp-ttable .te-meta{color:var(--ink-faint);font-size:12px;margin-top:2px;}
   .rp-ttable .te-eff .te-meta{white-space:normal;font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:400;}
@@ -333,8 +338,8 @@ if(tw||ss||mm("(display-mode: standalone)")||mm("(display-mode: fullscreen)")||m
   /* Snackbar */
   .snack{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--ink);color:var(--paper);padding:12px 16px;border-radius:12px;font-size:13.5px;display:flex;align-items:center;gap:14px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
   .snack.show{opacity:1;pointer-events:auto;}
-  .snack button{background:none;border:none;color:var(--aubergine-deep);font-weight:700;cursor:pointer;font-size:13.5px;}
-  html[data-theme="dark"] .snack button{color:var(--aubergine-deep);}
+  .snack button{background:none;border:none;color:#D9C2E8;font-weight:700;cursor:pointer;font-size:13.5px;} /* v90 : lisible sur la barre sombre (10:1) */
+  html[data-theme="dark"] .snack button{color:#5A4067;} /* barre claire en thème sombre (7,5:1) */
 
   /* Lock screen */
   .lock{position:fixed;inset:0;background:var(--paper);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:30px;}
@@ -498,6 +503,27 @@ if(tw||ss||mm("(display-mode: standalone)")||mm("(display-mode: fullscreen)")||m
    on n'en rejoue pas un second, on garde seulement un fond uni le temps que l'écran soit prêt. */
 html.app-shell #boot .boot-inner{display:none;}
 html.app-shell #boot{transition:opacity .18s ease;}
+/* Appli Android native : l'écran de lancement d'Android reste affiché jusqu'à ce que la page soit prête ;
+   la page s'étend sous les barres système (bord à bord), d'où les marges ci-dessous. */
+@media screen{
+  html.native{--sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));}
+  html.native #boot{background:#ECE6F0;}
+  html.native #boot .boot-logo{transition:opacity .4s ease,transform .6s cubic-bezier(.2,.8,.2,1);}
+  html.native #boot:not(.go) .boot-logo{opacity:0;transform:scale(.94);}
+  html.native #boot:not(.go) .boot-name span{animation:none;opacity:0;}
+  /* nom plus présent et plus posé : lettres plus grandes, écriture plus lente, mot entier visible un instant avant le fondu */
+  html.native #boot{transition:opacity .5s ease;}
+  html.native #boot .boot-name{font-size:56px;color:#3A2845;}
+  html.native #boot.go .boot-name span{animation-duration:.6s;animation-delay:calc(.25s + var(--i)*.14s);}
+  html.native #boot.go .boot-name .boot-dot{animation-duration:.6s;animation-delay:calc(.25s + var(--i)*.14s + .08s);}
+  html.native header.app{padding-top:var(--sat);}
+  html.native body{padding-bottom:calc(104px + var(--sab));}
+  html.native .save-bar{padding-bottom:calc(18px + var(--sab));}
+  html.native .modal{padding-bottom:calc(26px + var(--sab));}
+  html.native .snack{bottom:calc(96px + var(--sab));}
+  html.native .lock{padding:calc(30px + var(--sat)) 30px calc(30px + var(--sab));}
+  html.native .welcome{padding:calc(32px + var(--sat)) 32px calc(32px + var(--sab));}
+}
 .boot-inner{display:flex;flex-direction:column;align-items:center;gap:22px;}
 /* le logo apparaît instantanément (comme le splash natif), seul le nom s'anime → transition sans rupture */
 .boot-logo{width:112px;height:112px;border-radius:26px;box-shadow:0 10px 26px rgba(33,28,40,.14);}
@@ -521,13 +547,13 @@ html.app-shell #boot{transition:opacity .18s ease;}
    ========================================================================= */
 :root{
   --paper:#ECE6F0;--surface:#F7F3F8;--surface-2:#E7E0ED;
-  --ink:#241D2B;--ink-soft:#5F566A;--ink-faint:#6E6479;--line:#D6CCE0;
+  --ink:#241D2B;--ink-soft:#5F566A;--ink-faint:#685E73;--line:#D6CCE0; /* v90 : faint ≥ 4,5:1 sur surface-2 */
   --aubergine:#5A4067;--aubergine-deep:#43304F;--rose:#B0586D;--sage:#6E9170;
   --ease-out:cubic-bezier(.23,1,.32,1);--ease-drawer:cubic-bezier(.32,.72,0,1);
 }
 html[data-theme="dark"]{
   --paper:#17131B;--surface:#211C26;--surface-2:#2A2431;
-  --ink:#EFEAF3;--ink-soft:#ADA3B8;--ink-faint:#8C8298;--line:#383040;
+  --ink:#EFEAF3;--ink-soft:#ADA3B8;--ink-faint:#968CA2;--line:#383040; /* v90 : faint ≥ 4,5:1 sur surface-2 */
   --aubergine:#BDA0CF;--aubergine-deep:#D2BCE0;--rose:#E394A6;--sage:#8FBD8D;
 }
 body{transition:none;}
@@ -716,13 +742,193 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
   .chip:active,.btn:active,.fil button:active,.rg-step:active,.pain2:active{transform:none;}
   .boot-name .boot-dot{animation:none;opacity:1;transform:none;}
 }
+/* ===== Ouverture de l'appli native (v84, 2 s) : le cygne se dessine d'un trait, la goutte rose se pose,
+   une onde s'étend, puis le nom se révèle. Tout part du fond lilas uni de l'écran de lancement Android. ===== */
+.boot-mark{display:none;}
+@media screen{
+  html.native #boot .boot-logo{display:none;}
+  html.native #boot .boot-inner{gap:30px;transform-origin:50% 42%;transition:transform .6s cubic-bezier(.4,0,.2,1);}
+  html.native #boot.boot-out .boot-inner{transform:translateY(-10px) scale(1.035);}
+  html.native #boot .boot-mark{display:block;position:relative;width:116px;height:116px;}
+  html.native .bm-glow{position:absolute;left:50%;top:50%;width:440px;height:440px;margin:-220px 0 0 -220px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,rgba(255,255,255,.78) 0,rgba(255,255,255,.42) 26%,rgba(248,240,246,.16) 46%,rgba(255,255,255,0) 64%);opacity:0;}
+  html.native .bm-ring{position:absolute;left:50%;top:50%;width:128px;height:128px;margin:-64px 0 0 -64px;border-radius:50%;
+    border:1.5px solid rgba(99,74,112,.30);opacity:0;}
+  html.native .bm-ring2{border-color:rgba(190,106,124,.26);}
+  html.native .bm-tile{position:absolute;inset:0;opacity:0;}
+  html.native .bm-shadow{position:absolute;inset:3px;border-radius:26px;box-shadow:0 16px 32px rgba(54,38,66,.20),0 4px 10px rgba(54,38,66,.10);opacity:0;}
+  html.native .bm-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;display:block;}
+  html.native .bm-k{stroke-dasharray:1 2;stroke-dashoffset:1.02;}
+  html.native .bm-dot{transform-box:fill-box;transform-origin:center;transform:scale(0);opacity:0;}
+  html.native #boot .boot-name{font-size:56px;color:#3A2845;letter-spacing:-.005em;}
+  html.native #boot .boot-name span{opacity:0;animation:none;}
+  /* thème sombre : même ouverture sur le fond sombre de l'appli (et de l'écran de lancement Android en mode nuit) */
+  html.native[data-theme="dark"] #boot{background:#17131B;}
+  html.native[data-theme="dark"] #boot .boot-name{color:#EFEAF3;}
+  html.native[data-theme="dark"] .bm-glow{background:radial-gradient(circle,rgba(189,160,207,.17) 0,rgba(189,160,207,.08) 28%,rgba(189,160,207,0) 62%);}
+  html.native[data-theme="dark"] .bm-ring{border-color:rgba(210,188,224,.20);}
+  html.native[data-theme="dark"] .bm-ring2{border-color:rgba(227,148,166,.20);}
+  html.native[data-theme="dark"] .bm-shadow{box-shadow:0 16px 34px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.35);}
+
+  html.native #boot.go .bm-glow{animation:bmGlow 1.6s cubic-bezier(.22,.61,.36,1) .03s both;}
+  html.native #boot.go .bm-tile{animation:bmTile .75s cubic-bezier(.16,1,.3,1) 0s both;}
+  html.native #boot.go .bm-shadow{animation:bmFade .8s ease .2s both;}
+  html.native #boot.go .bm-k1{animation:bmDraw .60s cubic-bezier(.45,.05,.25,1) .20s both;}
+  html.native #boot.go .bm-k2{animation:bmDraw .16s ease-out .46s both;}
+  html.native #boot.go .bm-k4{animation:bmDraw .38s cubic-bezier(.4,0,.2,1) .52s both;}
+  html.native #boot.go .bm-k3{animation:bmDraw .15s ease-out .70s both;}
+  html.native #boot.go .bm-k5{animation:bmDraw .26s cubic-bezier(.4,0,.2,1) .72s both;}
+  html.native #boot.go .bm-dot{animation:bmDot .45s cubic-bezier(.2,.9,.3,1) .88s both;}
+  html.native #boot.go .bm-ring{animation:bmRing 1.4s cubic-bezier(.2,.7,.3,1) .95s both;}
+  html.native #boot.go .bm-ring2{animation-delay:1.13s;}
+  html.native #boot.go .boot-name span{animation:bmLetter .65s cubic-bezier(.2,.75,.25,1) calc(.70s + var(--i)*.065s) both;}
+  html.native #boot.go .boot-name .boot-dot{animation:bmNameDot .45s cubic-bezier(.45,0,.3,1) 1.40s both;}
+}
+@keyframes bmGlow{from{opacity:0;transform:scale(.55);}to{opacity:1;transform:scale(1);}}
+@keyframes bmTile{from{opacity:0;transform:translateY(12px) scale(.9);}to{opacity:1;transform:none;}}
+@keyframes bmFade{from{opacity:0;}to{opacity:1;}}
+@keyframes bmDraw{from{stroke-dashoffset:1.02;}to{stroke-dashoffset:0;}}
+@keyframes bmDot{from{opacity:0;transform:scale(0);}40%{opacity:1;}to{opacity:1;transform:scale(1);}}
+@keyframes bmRing{0%{opacity:0;transform:scale(.92);}12%{opacity:1;}100%{opacity:0;transform:scale(2.5);}}
+@keyframes bmLetter{from{opacity:0;transform:translate(calc((var(--i) - 2.5)*3.2px),16px);filter:blur(7px);}to{opacity:1;transform:none;filter:blur(0);}}
+@keyframes bmNameDot{0%{opacity:0;transform:translateY(-30px);}35%{opacity:1;}100%{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){
+  html.native #boot.go .bm-glow,html.native #boot.go .bm-tile,html.native #boot.go .bm-shadow,html.native #boot.go .bm-k,
+  html.native #boot.go .bm-dot,html.native #boot.go .boot-name span{animation:none;opacity:1;transform:none;filter:none;stroke-dashoffset:0;}
+  html.native #boot.go .bm-ring{animation:none;opacity:0;}
+}
+/* ===== v86 — finitions visuelles, sans coût de fluidité (rien ne tourne en continu ; opacité / transform seulement) ===== */
+/* Barre du haut : fond uni (le flou recalculé à chaque image de défilement est supprimé), filet seulement une fois la page défilée */
+header.app{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom-color:transparent;transition:border-color .2s ease;}
+header.app.scrolled{border-bottom-color:var(--line);}
+/* Changement d'écran : fondu très court, l'écran reste utilisable immédiatement */
+.view.on{animation:viewIn .14s ease-out;}
+@keyframes viewIn{from{opacity:.35;}to{opacity:1;}}
+/* Enregistrer ma journée : la coche se trace dans le bouton */
+#save-btn{position:relative;display:grid;place-items:center;overflow:hidden;}
+#save-btn>span{grid-area:1/1;display:inline-flex;align-items:center;gap:8px;transition:opacity .18s ease,transform .25s cubic-bezier(.2,.8,.2,1);}
+#save-btn .sb-done{opacity:0;transform:translateY(10px);}
+#save-btn .sb-done svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;}
+#save-btn .sb-done path{stroke-dasharray:1 2;stroke-dashoffset:1.02;}
+#save-btn.done .sb-label{opacity:0;transform:translateY(-10px);}
+#save-btn.done .sb-done{opacity:1;transform:none;}
+#save-btn.done .sb-done path{animation:sbCheck .38s cubic-bezier(.45,.05,.25,1) .08s forwards;}
+@keyframes sbCheck{to{stroke-dashoffset:0;}}
+.saved-flash{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+/* Fenêtres de confirmation et de saisie au style de l'appli (remplacent les boîtes grises d'Android) */
+#ask-bg{z-index:60;}
+.ask-modal h3{font-family:"Newsreader",Georgia,serif;font-size:21px;font-weight:600;margin:2px 0 8px;color:var(--ink);}
+.ask-text p{margin:0 0 9px;color:var(--ink-soft);font-size:15px;line-height:1.5;}
+.ask-text p.ask-strong{color:var(--ink);font-weight:500;}
+#ask-input{width:100%;margin:6px 0 4px;}
+.ask-actions{display:flex;flex-direction:column;gap:9px;margin-top:16px;}
+.ask-actions .btn{width:100%;}
+#ask-ok.danger{background:var(--rose);color:#fff;}
+html[data-theme="dark"] #ask-ok.danger{color:#1A1320;}
+#ask-cancel{background:none;border:none;color:var(--ink-soft);}
+/* Tuiles de chiffres : 4 tuiles → grille 2 × 2, sans tuile orpheline */
+.stat-grid:has(>.stat:nth-child(4)){grid-template-columns:repeat(2,1fr);}
+/* Récapitulatif : périodes sur une ligne + « depuis le dernier rendez-vous » en entier ; actions sans retour à la ligne */
+#doc-range-pick button[data-mode="rdv"]{flex-basis:100%;}
+.doc-actions .btn{white-space:nowrap;}
+.doc-actions #print-btn{flex-basis:100%;}
+/* Courbes : ligne un peu plus présente, jours isolés visibles, trous reliés en pointillés discrets */
+.lc-line{stroke-width:2.2;}
+.lc-gap{fill:none;stroke:var(--aubergine);stroke-width:1.2;stroke-dasharray:2 3.5;opacity:.45;}
+.lc-pt{fill:var(--aubergine);}
+.lc-dot{stroke:var(--surface);stroke-width:2;}
+/* Silhouette : volume léger et contour net ; points vides plus lisibles comme zones à toucher */
+.body-shape{fill:url(#bodyGrad);stroke:color-mix(in srgb,var(--aubergine) 30%,var(--line));stroke-width:1.1;}
+.body-spine{stroke:color-mix(in srgb,var(--aubergine) 28%,var(--line));}
+.hot.zero{fill:var(--surface);stroke:color-mix(in srgb,var(--aubergine) 55%,var(--ink-faint));stroke-width:1.4;}
+html[data-theme="dark"] .hot.zero{fill:var(--surface-2);stroke:color-mix(in srgb,var(--aubergine) 60%,var(--ink-faint));}
+/* ===== v90 : la petite barre prend la largeur utile (avant : moitié de l'écran au plus, texte en colonne) ===== */
+.snack{width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;}
+.snack #snack-msg{min-width:0;}
+.snack button{flex:none;white-space:nowrap;}
+.suivi-link{white-space:nowrap;}
+/* ===== v90 : contrastes du thème clair (texte ≥ 4,5:1) ===== */
+html:not([data-theme="dark"]) .rp-pill.ok b{color:#476B4B;}
+html:not([data-theme="dark"]) .rp-pill.mid b{color:#8A5A12;}
+html:not([data-theme="dark"]) .rp-pill.no b{color:#9A4459;}
+html:not([data-theme="dark"]) .tedit .te-del,html:not([data-theme="dark"]) #wipe-all{color:#9A4459!important;}
+/* ===== v87 : petit rappel (appli Android) ===== */
+.rmd .lbl{font-size:12.5px;color:var(--ink-soft);margin:14px 0 6px;}
+html.bigtext .rmd .lbl{font-size:14.5px;}
+.rmd .seg .chip{min-height:38px;padding:7px 13px;font-size:13.5px;}
+.rmd-time{width:auto;min-width:120px;font-size:16px;font-variant-numeric:tabular-nums;padding:8px 11px;}
+.rmd-days{display:flex;gap:5px;flex-wrap:wrap;}
+.rmd-days .chip{width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border-radius:50%;font-size:13.5px;}
+.rmd-sub{font-size:12px;color:var(--ink-soft);margin:6px 2px 0;line-height:1.45;}
+.rmd .bilat{margin-top:14px;align-items:flex-start;line-height:1.4;font-size:13px;}
+.rmd .bilat input{margin-top:1px;}
+.rmd-sum{display:flex;align-items:center;gap:2px;margin-top:12px;padding:8px 2px 8px 12px;border-radius:12px;background:var(--surface-2);}
+.rmd-sum-t{flex:1;min-width:0;font-size:13.5px;color:var(--ink);line-height:1.4;}
+.rmd-sum-n{display:block;font-size:12px;color:var(--ink-soft);}
+.rmd-link{border:none;background:none;color:var(--aubergine);font:inherit;font-weight:600;font-size:13px;padding:8px;cursor:pointer;flex:0 0 auto;}
+.rmd-warn{margin:12px 0 0;padding:9px 12px;border-radius:12px;border-left:3px solid var(--rose);background:var(--surface-2);font-size:12.5px;color:var(--ink);line-height:1.45;}
+.rmd-warn .rmd-link{display:block;padding:6px 0 0;}
+.rmd-foot{font-size:11.5px;color:var(--ink-faint);margin:10px 2px 0;line-height:1.45;}
+.rmd-nudge{display:flex;align-items:center;flex-wrap:wrap;gap:0 2px;font-size:13px;color:var(--ink-soft);margin:-4px 0 10px;}
+.rmd-nudge span{margin-right:4px;}
+.rmd-nudge button{border:none;background:none;font:inherit;font-size:13px;color:var(--ink-faint);padding:6px 5px;cursor:pointer;}
+.rmd-nudge button.y{color:var(--aubergine);font-weight:600;}
+/* ===== v86 : récapitulatif imprimé — plus lisible, plus aéré, sans feuilles à moitié vides ===== */
+@media print{
+  @page{size:A4;margin:16mm 13mm 15mm;}
+  .wrap{padding:0;}
+  .report{font-size:10pt;line-height:1.45;color:#211C28;}
+  .report h2{font-size:18pt;margin:0 0 1.5mm;}
+  .report .rp-meta{font-size:9.5pt;color:#4A4352;margin-bottom:3mm;}
+  .report .rp-synth{padding:4mm 5mm 3.5mm;}
+  .report .rp-synth>h3{font-size:13.5pt;margin-bottom:1mm;}
+  .report .rp-keys{font-size:10.5pt;line-height:1.5;padding-left:5mm;}
+  .report .rp-keys li{margin:1.5mm 0;}
+  .report .rp-cap{font-size:8.7pt;color:#55505E;margin-bottom:2.5mm;}
+  .report .rp-sec{margin-top:6mm;padding-top:4mm;break-inside:auto;}
+  .report .rp-sec:not(:has(table)){break-inside:avoid;}
+  .report .rp-sec.rp-synth{margin-top:4mm;padding-top:4mm;}
+  .report .rp-sec>h3{font-size:12.5pt;break-after:avoid;margin-bottom:.8mm;}
+  .report .rp-sec>.rp-cap{break-after:avoid;}
+  .report .rp-calsec{break-inside:auto;}
+  .report table{font-size:9.6pt;}
+  .report th{font-size:8.4pt;color:#55505E;}
+  .report td{padding-top:1.6mm;padding-bottom:1.6mm;}
+  .report .te-meta{font-size:8.6pt;color:#55505E;}
+  .report .rp-ressenti{font-size:9pt;color:#4A4352;}
+  .report .rp-figures{margin:6mm 0 4mm;gap:2.5mm;break-inside:avoid;}
+  .report .rp-fig{padding:2.6mm 1.5mm;}
+  .report .rp-fig .n{font-size:16pt;}
+  .report .rp-fig .l{font-size:8.5pt;color:#4A4352;line-height:1.25;}
+  .report .rp-prose{font-size:10pt;line-height:1.5;}
+  .report .rp-pill{font-size:9.5pt;}
+  .report .legend{font-size:8.5pt;}
+  .cal-print{gap:4mm 6mm;}
+  .cal-panel{width:56mm;}
+  .cal-ptitle{font-size:8.5pt;color:#4A4352;}
+  .cal-print .cal .dow{font-size:7pt;}
+  .cal-print .cal .cell{font-size:7.2pt;}
+  .cal-print .cal .cell.reg::after{top:.55mm;right:.55mm;bottom:auto;left:auto;width:1.25mm;height:1.25mm;background:#fff;box-shadow:0 0 0 .3mm #7A2E40;}
+  .report .legend .dot{background:#fff;box-shadow:0 0 0 .3mm #7A2E40;width:1.6mm;height:1.6mm;margin-right:1mm;}
+  .report .rp-food th:first-child{width:34%;}
+  .report .cmp-details summary{font-family:"Newsreader",Georgia,serif;font-size:12.5pt;font-weight:600;color:#211C28;margin-bottom:1mm;}
+  .report .cmp-details summary::before{content:none;}
+  .report .cmp-row{font-size:10pt;}
+  .report .rp-food .fv{font-weight:600;}
+}
+.rp-food .fv{font-variant-numeric:tabular-nums;}
+.rp-food th.num,.rp-food td.num{text-align:right;}
+.rp-food td.num.em{font-weight:600;color:var(--ink);}
 @media print{.fil{display:none!important;}}
 </style>
 </head>
 <body>
-<div id="boot" aria-hidden="true"><div class="boot-inner"><img class="boot-logo" src="icon-192.png" alt=""><div class="boot-name"><span style="--i:0">S</span><span style="--i:1">w</span><span style="--i:2">a</span><span style="--i:3">n</span><span style="--i:4">n</span><span style="--i:5">e</span><span class="boot-dot" style="--i:6">.</span></div></div></div>
+<div id="boot" aria-hidden="true"><div class="boot-inner"><div class="boot-mark"><span class="bm-glow"></span><span class="bm-ring"></span><span class="bm-ring bm-ring2"></span><div class="bm-tile"><span class="bm-shadow"></span><svg class="bm-svg" viewBox="0 0 512 512" aria-hidden="true"><defs><mask id="bmM" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path class="bm-k bm-k1" pathLength="1" d="M110 326 C150 352 200 385 255 403 C300 412 345 400 366 380 C380 362 374 322 356 290 C333 252 300 205 290 160 C283 126 300 100 326 98 C345 98 360 112 372 126" stroke-width="72"/><path class="bm-k bm-k2" pathLength="1" d="M316 370 L346 348" stroke-width="30"/><path class="bm-k bm-k3" pathLength="1" d="M320 134 L352 158" stroke-width="26"/></g></mask><mask id="bmW" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path class="bm-k bm-k4" pathLength="1" d="M74 294 C120 292 170 270 222 259 C258 253 286 266 306 290" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round"/></mask><mask id="bmB" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path class="bm-k bm-k5" pathLength="1" d="M342 128 C362 142 380 162 394 186" fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round"/></mask></defs><rect width="512" height="512" rx="118" fill="#634A70"/><path d="M286.4 414.6C274.1 414.5 271.8 414.4 271.1 414.1C270.5 413.9 269.4 413.8 267.2 413.8C264.7 413.8 264 413.7 263.8 413.4C263.5 413.1 262.9 413 260.9 413C259.2 413 258.2 412.9 258 412.7C257.9 412.5 256.9 412.3 255.8 412.2C254.7 412.1 253 411.9 251.9 411.8C250.8 411.7 249.5 411.4 249.1 411.2C248.7 410.9 248 410.8 247.6 410.8C245.9 410.8 241.9 410 240.5 409.4C239.6 409 238.5 408.8 237.8 408.8C237 408.8 236.4 408.6 236.2 408.4C236.1 408.1 235.5 408 234.9 408C234.3 408 233.6 407.9 233.4 407.7C233.1 407.5 232.5 407.3 232 407.2C229.2 406.8 226.5 406.1 223.4 404.9C222.4 404.5 221.1 404.1 220.4 403.9C219.8 403.6 219.2 403.4 219.1 403.2C219 403.1 218.7 403 218.4 403C218.1 403 217.5 402.8 217 402.5C216.5 402.3 215.4 401.9 214.5 401.7C212.9 401.4 211.7 401 211 400.4C210.6 400 208.8 399.4 206.9 398.9C206.2 398.7 205.4 398.5 205.1 398.3C204.8 398.1 204.4 398 204.2 398C203.7 398 203 397.7 200.6 396.4C197.6 394.7 196.1 394 195.4 394C194.6 394 188.4 390.8 187.3 389.9C186.8 389.4 184.6 388.2 182.4 387C180.1 385.9 177.7 384.5 177 384C176.4 383.4 175.6 383 175.3 383C175 383 174 382.4 172.9 381.6C171.2 380.1 169.3 379 168.7 379C168.2 379 162.2 374.9 160.7 373.5C160 372.8 158.7 371.9 157.9 371.5C155.8 370.4 148.9 365.2 146.5 362.8C145.3 361.7 144.2 360.8 144 360.8C143.6 360.7 143.1 360.3 137.9 355.4C136 353.6 134 351.8 133.3 351.5C132 350.7 121.4 340.1 120.4 338.5C120 337.8 118.2 335.8 116.4 333.9C112.1 329.4 112.2 329.5 111.2 328.2C110.4 327.2 109.4 325.5 109.6 325.5C109.8 325.5 112 326.6 112.9 327.1C113.4 327.5 114 327.8 114.2 327.9C114.5 328 115.1 328.5 115.8 329C116.4 329.6 117.7 330.3 118.7 330.7C119.6 331.1 120.8 331.8 121.2 332.2C121.7 332.6 122.4 333.1 122.8 333.1C123.2 333.2 124 333.7 124.5 334.1C125 334.6 125.7 335 126.1 335.1C126.5 335.2 127.3 335.7 127.8 336.1C128.4 336.5 129.4 337.2 130.1 337.5C130.8 337.8 131.7 338.3 132 338.6C132.3 339 133.1 339.5 133.8 339.7C134.4 340 135.4 340.7 136.1 341.1C136.8 341.6 137.5 342 137.7 342C138 342 138.6 342.4 139.2 343C139.8 343.5 140.7 344 141.1 344.1C141.5 344.2 142.2 344.6 142.6 345C143 345.4 145.4 346.7 147.9 348C150.3 349.2 152.8 350.6 153.2 351.1C154 351.8 155.1 352.5 158.2 353.9C158.6 354.1 159 354.4 159.2 354.5C159.7 354.8 167 358.5 167.9 358.9C168.3 359.1 168.8 359.4 169 359.5C169.4 359.8 176.7 363.5 177.7 363.9C178.1 364.1 178.5 364.4 178.8 364.5C179 364.6 179.4 364.9 179.8 365C180.1 365.1 180.5 365.4 180.8 365.5C182 366.3 185 367.6 186 367.8C186.6 367.9 187.5 368.3 188 368.6C188.5 369 189 369.2 189.2 369.2C189.3 369.2 189.6 369.4 189.7 369.6C189.9 369.8 190.4 370 190.9 370.1C191.5 370.2 192.3 370.4 192.9 370.6C193.4 370.8 194.2 371 194.5 371.1C194.8 371.2 195.7 371.6 196.4 372.1C197.3 372.7 198.1 373 199.1 373.1C200.4 373.3 201.8 373.9 202.8 374.6C203.1 374.9 204.5 375.4 207.5 376.1C209.7 376.7 211.2 377.2 211.8 377.6C212.1 377.8 212.8 378 213.4 378C214.1 378 215 378.2 215.7 378.6C217 379.3 219.1 379.8 222.1 380.2C223.1 380.4 224.4 380.7 224.8 380.9C225.2 381.1 226.2 381.4 227 381.4C227.7 381.4 228.6 381.6 228.9 381.9C229.2 382.1 230 382.2 230.8 382.2C231.5 382.2 232.4 382.4 232.6 382.6C233 382.8 234.6 383 237.5 383.2C239.9 383.4 242.4 383.7 243 383.9C244 384.2 246.2 384.2 257.6 384.1C272.8 384 276.1 383.9 276.9 383.4C277.1 383.1 277.9 383 278.8 383C279.6 383 280.4 382.9 280.6 382.6C280.9 382.4 281.7 382.3 282.8 382.3C284 382.2 284.6 382.1 285 381.8C285.4 381.5 286.2 381.2 287 381.1C287.8 381 288.9 380.8 289.6 380.6C290.3 380.4 291.4 380.2 292.1 380.1C293.8 379.9 297.2 379 298 378.6C299.8 377.7 301.6 377 302.2 377C302.9 377 304.2 376.4 305.5 375.4C305.8 375.2 306.5 375 307 375C307.5 375 308 374.9 308.1 374.8C308.4 374.3 310.6 373.2 311.6 373.1C312.4 373 313 372.7 313.7 372C314.3 371.4 315 371 315.2 371C315.4 371 315.9 370.9 316.1 370.7C316.4 370.5 316.9 370.2 317.2 370.1C317.6 370 318.1 369.7 318.5 369.5C321.7 367.3 325.3 365 325.5 365C326 365 336.1 354.6 337.4 352.8C338.9 350.5 341 346.6 341 345.8C341 345.7 341.4 345.1 342 344.5C342.7 343.7 343 343.1 343 342.6C343 342.2 343.2 341.5 343.5 341.1C343.9 340.7 344.1 339.9 344.2 339.2C344.3 338.4 344.5 337.6 344.7 337.4C344.9 337.1 345 336.5 345 336C345 335.5 345.2 334.8 345.4 334.4C345.6 334 345.8 333.1 345.9 332.5C345.9 331.9 346.1 330.8 346.3 330C346.9 327.9 347.3 319.7 346.9 318.4C346.6 317.7 346.5 316.2 346.5 314C346.5 311.5 346.4 310.3 346.1 309.7C345.9 309.2 345.8 308.2 345.8 307.5C345.8 306.9 345.6 305.9 345.4 305.4C345.2 304.9 345 303.9 345 303.1C345 302.2 344.9 301.4 344.7 301.1C344.2 300.5 343.4 297.5 343.6 297.3C343.7 297.2 343.6 296.8 343.4 296.3C343.2 295.8 343 295 343 294.5C343 293.7 342.5 292.1 341.5 289.9C341.2 289.3 341 288.7 341 288.5C341 288.4 340.9 287.9 340.7 287.5C339.9 286.2 339.2 284.1 339.2 283.3C339.2 282.9 339 282.2 338.7 281.7C338 280.8 337.4 279 337.1 277.4C336.9 276.3 327.4 257.1 325.9 254.8C325.2 253.9 324.4 252.7 324 252.2C323.4 251.4 322 248.8 322 248.3C322 247.7 320.4 245 316.1 238.5C314.5 236.1 313.2 234 313.1 233.7C312.8 232.7 312 231.3 311.4 230.7C311.1 230.3 310 228.6 309.1 226.7C308.2 224.8 307 222.8 306.4 222.1C305.9 221.4 305.1 220.1 304.6 219.1C304.1 218.2 302.8 215.6 301.6 213.4C299.6 209.4 295.1 200.7 294.1 198.8C293.9 198.3 293.6 197.4 293.5 196.8C293.3 196.1 292.3 193.7 291.1 191.4C289.9 189 289 186.9 289 186.6C289 185.7 288.2 183.4 287.6 182.5C287.3 182 286.8 180.8 286.5 179.7C286.3 178.6 285.9 177.6 285.8 177.3C285.7 177.1 285.5 176.3 285.4 175.7C285.3 174.5 284.4 172.3 283.6 170.7C283.4 170.3 283.1 168.8 283 167.2C282.9 165.6 282.6 163.9 282.4 163.4C282.1 162.8 282 161.7 282 160.3C282 158.6 281.9 157.9 281.5 157.2C281 156.3 281 155.8 281 150.3C281 145.3 281.1 144.3 281.4 143.6C281.7 143.1 281.9 141.6 282.1 138.8C282.4 135.9 282.6 134.6 282.9 134.2C283.1 133.9 283.2 133.1 283.2 132.3C283.2 131.6 283.4 131 283.5 130.9C283.9 130.6 284.6 128.7 284.9 127.5C284.9 126.9 285.5 125.5 286 124.4C286.5 123.3 287.2 121.7 287.6 120.9C290 115.5 295.4 108.4 299.2 105.7C302.7 103.1 303.9 102.3 306.6 101C308.4 100.1 310.3 99.4 311.1 99.2C312 99.1 312.8 98.8 313 98.6C313.2 98.5 314.3 98.3 315.4 98.2C316.6 98.1 317.6 97.9 317.9 97.8C318.5 97.3 324.1 97.3 325.6 97.8C326.2 98.1 327.4 98.2 328.2 98.2C329.2 98.2 329.8 98.4 330 98.6C330.2 98.9 330.8 99 331.6 99C332.3 99 333.3 99.2 333.9 99.5C334.5 99.8 335.5 100.2 336.1 100.5C336.7 100.8 337.5 101 337.9 101C338.9 101 339.2 101.2 341.9 102.6C343 103.2 344.6 104.1 345.5 104.5C348.2 105.9 350.5 107.3 353 109.1C354.3 110.1 355.8 111.2 356.4 111.5C357.4 112.3 357.7 112.5 362 116.5C363.5 117.8 365.1 119.3 365.6 119.8C366.1 120.2 366.7 120.9 366.9 121.3C367.1 121.7 367.9 122.6 368.6 123.4C369.9 124.7 370 124.9 370 126C370 126.9 369.9 127.2 369.1 127.9C368.6 128.3 367.7 128.8 367.1 129C366.5 129.1 366 129.4 365.9 129.5C365.8 129.6 364.7 129.8 363.5 129.8C362 129.8 360.9 129.9 360.2 130.2C359.5 130.5 358.8 130.5 357.6 130.4C356.6 130.3 353.2 130.1 350.1 130C345.4 129.8 344.1 129.7 343.8 129.4C343.5 129.2 342.6 129 340.4 129C338.1 128.9 337.2 128.8 336.8 128.5C335.5 127.7 334.6 127.6 333.9 128.4C333.1 129.2 333.1 129.5 333.9 130.4C334.3 130.8 335.7 132.4 337 133.9C340.2 137.7 341.7 139.5 342.7 140.5C343.1 141 344.1 142.2 344.9 143.2C345.7 144.1 347.1 145.7 347.9 146.7C349.8 148.9 350.8 150.8 351 152.8C351.1 153.7 351.3 154.7 351.6 155C351.8 155.3 352 156.1 352 156.6C352 157.8 352.6 161.4 352.9 162.1C353.2 162.8 352.6 163.3 351.5 163.1C350.7 162.9 348.7 162.2 347.2 161.4C346.8 161.2 346.3 161 346.2 161C346 161 345.5 160.8 345 160.5C344.5 160.3 343.9 160 343.6 159.9C342.4 159.5 338.1 156.4 336.4 154.8C335.5 153.8 334.2 152.7 333.6 152.3C333.1 151.9 331.5 150.4 330.1 148.9C326.4 144.8 322.9 141.3 322.1 141C321.8 140.9 321 140.8 320.5 140.8C320 140.8 319.4 140.6 319.2 140.4C318.9 139.9 318 139.9 316.9 140.4C316.4 140.6 315.5 140.8 314.8 140.9C313.3 141.1 312.8 141.5 311.3 143.3C309.9 145.1 309.2 146.4 308.6 148.1C308.1 149.8 308.1 159.1 308.6 159.9C308.9 160.3 309.2 161.9 309.8 165.6C309.9 166.4 310.1 167.2 310.3 167.5C310.8 168 311.2 169.4 311.3 170.5C311.3 171.1 311.6 171.8 312.1 172.7C312.6 173.5 313 174.2 313 174.4C313 174.8 313.8 177.5 314.5 179.4C314.8 180.2 315.3 181.1 315.6 181.6C316 182.1 316.2 182.7 316.2 183C316.2 183.3 316.4 183.7 316.5 183.9C316.6 184.2 317.5 186 318.5 187.9C319.5 189.9 320.6 192 321 192.6C322.8 194.9 326 200.1 326 200.4C326 201 326.8 202.3 331.1 208C333.3 210.9 335.5 214.1 335.9 214.9C336.7 216.5 338 218.1 342.2 223C343.1 224.2 344.9 226.6 346.1 228.4C347.3 230.2 349 232.4 349.9 233.4C350.9 234.3 351.8 235.4 352.1 235.8C352.3 236.1 353 237.1 353.6 237.9C354.8 239.4 356.3 241.5 358.2 244.3C358.9 245.2 360.9 248 362.7 250.5C364.6 253 366.4 255.6 366.8 256.1C367.2 256.7 368.1 258 368.9 259C371.1 262.1 372.5 264.3 372.8 265C372.9 265.7 375.4 269.3 377 271.5C377.7 272.4 378.6 273.9 379 275C379.1 275.3 379.4 275.8 379.5 276C379.6 276.2 380.2 277.4 380.8 278.6C381.8 280.8 384.2 285.9 385.9 289.4C386.7 291.1 387.2 292.4 387.9 295.2C388.4 297.5 389 299 389.5 299.9C389.8 300.3 390 301.1 390 301.5C390 302 390.2 303 390.4 303.7C390.5 304.4 390.8 305.6 390.9 306.3C391 307 391.2 307.8 391.4 308.1C391.7 308.4 391.9 309.2 391.9 310.6C392 311.8 392.2 312.8 392.4 313C392.8 313.5 393 317.4 393 325.2C393 334.3 392.8 337.7 392.2 338.8C391.9 339.5 391.8 340 391.9 340.5C392 341 391.9 341.6 391.5 342.3C391.2 343 391 343.7 391 344.8C391 345.9 390.9 346.7 390.5 347.4C390.1 348 389.9 349 389.8 350C389.8 350.9 389.6 352 389.4 352.4C388.4 354.5 387.8 356.2 387.8 356.5C387.8 356.6 387.6 357 387.4 357.3C387.2 357.6 387 358.4 386.9 359.1C386.8 359.9 386.2 361.1 385.4 362.6C384.6 363.9 384 365.3 383.9 365.9C383.8 366.6 382.7 368.6 378.9 374.2L374 381.6L369.6 386.1C367.1 388.5 364.7 390.8 364.1 391.2C363.2 391.8 360.6 393.9 359.8 394.6C358.7 395.8 357.1 396.8 354.8 398C353.3 398.7 351.8 399.6 351.4 400C351 400.4 350.3 400.8 350 401C349.7 401.1 349.2 401.4 349 401.5C348.8 401.6 347.5 402.2 346.1 402.9C341.4 405.1 339.4 406 338.6 406.4C338.2 406.6 337.5 406.8 337 406.9C336.5 407 335.5 407.3 334.7 407.5C333.9 407.8 333 408 332.7 408C332.4 408 331.5 408.3 330.7 408.7C329.8 409.1 328.6 409.5 328 409.6C326.9 409.7 326.2 409.9 325 410.6C324.6 410.9 323.7 411 322.7 411C321.5 411 320.7 411.1 320 411.5C319.2 411.9 318.3 412.1 316.6 412.2C315.3 412.3 314.1 412.5 314 412.7C313.8 412.9 312.9 413 311.5 413C309.9 413 309.2 413.1 309 413.4C308.8 413.6 307.9 413.7 305.7 413.8C303.3 413.9 302.5 414 301.9 414.3C301.6 414.6 301.2 414.7 301.1 414.7C301 414.7 294.4 414.6 286.4 414.6Z" fill="#fff" mask="url(#bmM)"/><path d="M95.1 304.4C94.9 304.2 94.2 304 93.7 304C92.8 304 92.1 303.6 88.8 301.4C84.4 298.5 84 298.2 82.8 297.9C81.8 297.5 77.2 293.8 77.3 293.3C77.4 293 78.4 293 84 293C90.3 293 90.8 293 91.7 292.5C92.6 292.1 93.2 292 95.4 292C97.4 292.1 98.1 292 98.5 291.6C98.9 291.4 99.6 291.2 100.3 291.2C101 291.2 101.8 291.1 102.2 290.9C102.6 290.7 104.1 290.4 105.6 290.2C107.2 290.1 108.5 289.8 108.8 289.6C109.2 289.2 111.2 288.6 113.2 288.2C114.1 288.1 115.2 287.8 115.5 287.6C115.8 287.4 117 287 118 286.6C119 286.3 120.2 285.8 120.6 285.6C121 285.4 121.8 285.2 122.5 285.1C123.6 284.9 125.3 284.2 126 283.6C126.2 283.4 126.8 283.2 127.4 283C127.9 282.9 128.9 282.6 129.6 282.4C130.3 282.1 131.7 281.7 132.6 281.4C134.3 281 136 280.2 137.5 279.4C137.8 279.2 138.4 279 138.8 279C139.2 279 139.9 278.7 140.4 278.4C141 277.9 141.7 277.8 142.4 277.8C143.2 277.8 143.6 277.6 144.4 276.9C145.3 276.1 145.8 275.9 150.8 274.5C151.6 274.2 153.7 273.3 155.4 272.5C157.1 271.7 159 270.9 159.8 270.8C160.7 270.6 161.7 270.3 162.2 270C164.3 268.9 165.8 268.3 166.7 268.1C167.2 268 167.8 267.8 168.1 267.7C168.4 267.5 169.2 267.3 169.9 267.1C171.2 266.8 173.1 266.2 174.4 265.7C174.8 265.6 175.7 265.3 176.5 265.1C178.6 264.6 180.3 264 181 263.5C181.3 263.2 182 263 182.7 263C183.5 263 184.4 262.7 185.6 262.1C186.7 261.6 187.9 261.2 188.9 261.1C189.7 261 190.9 260.8 191.6 260.6C192.3 260.4 193.7 260.2 194.7 260C195.6 259.9 197 259.5 197.8 259.1C198.7 258.7 200 258.4 201.9 258.2C203.5 258.1 204.8 257.8 205 257.6C205.3 257.3 206.6 257.1 209.4 257C211.8 256.8 213.6 256.6 214 256.4C214.5 256.1 215.6 256 217.8 256C220.3 256 220.9 255.9 221.8 255.5C222.7 255 223.2 255 230.1 255C236.8 255 237.6 255 238.6 255.5C239.4 255.9 240.6 256 244.4 256.2C247.9 256.4 249.3 256.5 249.9 256.8C250.4 257.1 251.3 257.2 252.1 257.2C252.9 257.2 253.8 257.4 254.2 257.6C255.3 258.2 257.1 258.7 258.5 258.8C259.2 258.9 260.3 259.2 261 259.5C261.6 259.8 262.6 260.2 263.2 260.5C263.8 260.8 264.6 261 265.1 261C265.6 261 266.2 261.3 266.8 261.6C267.2 262 267.9 262.2 268.3 262.2C268.7 262.2 269.6 262.6 270.2 263C270.9 263.4 271.8 263.7 272.2 263.8C272.7 263.9 273.4 264.3 273.8 264.6C274.3 265 274.9 265.2 275.4 265.2C275.8 265.2 276.3 265.4 276.5 265.6C276.6 265.8 277.1 266 277.4 266.1C277.8 266.2 278.8 266.9 279.7 267.6C281.9 269.3 282.9 270 283.4 270C283.9 270 286.3 271.6 289.3 273.8C290.2 274.5 291.9 275.8 293.2 276.8C296.3 279.1 298.9 281.6 300.6 284.1C301.4 285.2 302 286.1 302 286.2C302 286.2 302.4 286.8 302.9 287.4C304.5 289.3 303.6 289.1 300.8 286.9C299.4 285.7 297.9 284.4 297.6 284.1C296.5 283.1 291.8 280.1 290.9 279.8C290.4 279.6 289.9 279.4 289.9 279.2C289.8 279.1 289.5 279 289.3 279C288.7 279 286.4 277.8 286.1 277.2C285.9 277 285.3 276.7 284.8 276.6C284.2 276.5 283.4 276.2 282.8 275.9C281.4 275 280 274.3 279 274.2C278.5 274.1 277.7 273.7 277.2 273.4C276.8 273 276.2 272.8 276 272.8C275.8 272.8 275.2 272.6 274.7 272.4C274.2 272.2 273.3 272 272.7 271.9C272 271.8 271.1 271.5 270.7 271.2C270.2 271 268.9 270.6 267.6 270.4C266.4 270.1 264.9 269.7 264.3 269.4C263.6 269.1 263 269 262.6 269.1C262.3 269.2 261.6 269.1 261.1 268.9C260.6 268.7 259.8 268.5 259.3 268.5C258.8 268.5 257.9 268.3 257.4 268.1C256.8 267.9 255.4 267.8 253.7 267.8C251.7 267.8 251 267.7 250.8 267.4C250.5 267.1 248.8 267 238.5 267C227.7 267 226.5 267 226.1 267.4C225.8 267.8 224.9 267.9 221.8 268C217.2 268.3 216.3 268.4 214.7 269C214 269.3 212.4 269.6 211.1 269.8C207.6 270.2 203.7 271 203.2 271.4C202.8 271.8 201.6 272.1 198.6 272.6C197.4 272.8 196.2 273.2 196 273.4C195.4 273.9 193.2 274.7 191.6 274.9C190.8 275 189.9 275.2 189.6 275.4C189.3 275.6 188.7 275.9 188.3 276.2C187.9 276.4 186.9 276.8 186.1 277C185.3 277.3 183.8 277.7 182.8 278C181.7 278.3 180.3 278.7 179.6 278.9C178.3 279.2 175.4 280.7 174.5 281.4C174.3 281.6 173.6 281.8 173 282C171 282.4 168.8 283.1 168.5 283.4C167.8 283.9 166.6 284.4 165.7 284.6C165.2 284.7 164.5 285 164.2 285.3C163.8 285.5 162.4 286 161.1 286.4C159.7 286.7 158.5 287.2 158.2 287.4C158.1 287.5 157.6 287.8 157.2 287.9C156.9 288 156.5 288.2 156.2 288.4C156 288.6 155.6 288.8 155.2 288.9C154.9 289 154.5 289.2 154.2 289.4C153.8 289.7 151.4 290.7 150.4 290.9C148.8 291.2 146.6 292.1 146.1 292.5C145.8 292.8 145.1 293 144.4 293.1C143.8 293.2 143.2 293.4 143.1 293.5C143 293.7 142.7 293.9 142.4 294C142.1 294.2 141.6 294.4 141.2 294.6C140.9 294.8 140.2 295 139.8 295C139.1 295 137.6 295.6 135.8 296.6C135.2 296.9 134.3 297.2 129.6 298.5C128.5 298.8 127.5 299.2 127.2 299.4C127 299.6 126.3 299.8 125.8 299.8C124.8 299.8 123.2 300.3 121.1 301.4C120.7 301.6 119.4 301.9 118.3 302C117.1 302.2 115.3 302.5 114.3 302.8C113.2 303 112 303.2 111.6 303.2C111.1 303.2 110.4 303.4 110 303.6C109.6 303.9 107.6 304.1 104.5 304.4C98.3 304.9 95.8 304.9 95.1 304.4Z" fill="#fff" mask="url(#bmW)"/><path d="M391.2 184C391 183.9 390.6 183.8 390.4 183.8C389.9 183.8 387.1 182.4 384.5 180.9C383.9 180.5 383 180.1 382.6 179.9C382.2 179.7 381.4 179.2 380.9 178.9C380.3 178.6 379.7 178.2 379.5 178.1C379.3 178 378 177.3 376.6 176.5C375.2 175.7 373.8 174.9 373.4 174.7C373.1 174.6 372.4 174.2 371.9 173.9C371.3 173.5 370.5 173.1 370.1 172.9C369.7 172.7 368.6 172.1 367.6 171.5C366.7 170.9 365.5 170.3 365.1 170.1C364.7 169.9 363.6 168.8 362.8 167.8C361.9 166.8 360.7 165.4 360.1 164.8C359.1 163.6 358.2 161.5 358.2 160C358.2 159.6 358 159 357.8 158.6C357.4 158.1 357.2 157.4 357.2 156.1C357.2 154.3 357.1 153.3 356.3 150.4C355.7 148.3 355.3 147.5 353.6 145.6C352.8 144.7 351.5 143.2 350.8 142.4C350.1 141.6 349.3 140.6 349.1 140.1C349 139.7 348 138.6 346.9 137.6C345.9 136.6 345 135.6 345 135.5C345 135.1 347.6 135.2 348 135.6C348.3 135.9 349.4 136 355 136C360.6 136 361.7 135.9 362 135.6C362.2 135.4 362.8 135.2 363.6 135.2C364.4 135.2 365.2 135.1 365.8 134.8C366.3 134.5 367.4 134.2 368.3 134.1C369.9 133.9 370.6 133.6 372.5 132.2C372.8 132.1 373.1 132 373.3 132.1C373.7 132.2 373.8 133.1 373.8 140.9C373.8 148 373.8 149.7 374.1 150.1C374.3 150.4 374.5 151.4 374.6 152.4C374.6 153.3 374.8 154.6 375 155.2C375.5 157.2 377.9 160.4 381.9 164.3C383.9 166.3 385.9 168.5 386.2 169.1C386.6 169.7 388.2 171.6 389.8 173.4C391.4 175.2 392.8 176.9 392.9 177.2C393 177.6 393.3 178.3 393.5 178.8C394.2 180 394.2 183.6 393.5 184C392.9 184.3 391.7 184.3 391.2 184Z" fill="#fff" mask="url(#bmB)"/><circle class="bm-dot" cx="409.1" cy="368.2" r="21.9" fill="#BE6A7C"/></svg></div></div><img class="boot-logo" alt="" decoding="sync" src="data:image/webp;base64,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"><div class="boot-name"><span style="--i:0">S</span><span style="--i:1">w</span><span style="--i:2">a</span><span style="--i:3">n</span><span style="--i:4">n</span><span style="--i:5">e</span><span class="boot-dot" style="--i:6">.</span></div></div></div>
+<script>/* appli native : on efface l'écran de lancement d'Android (fond lilas uni) puis on lance l'animation du nom */
+if(window.__bootNative)requestAnimationFrame(function(){requestAnimationFrame(function(){try{SwNative.ready();}catch(e){}
+setTimeout(function(){var b=document.getElementById("boot");if(b)b.classList.add("go");window.__bootGoT=Date.now();},120);});});</script>
 
-<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden" width="0" height="0"><defs><linearGradient id="proGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--aubergine);stop-opacity:.22"/><stop offset="100%" style="stop-color:var(--aubergine);stop-opacity:0"/></linearGradient></defs></svg>
+<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden" width="0" height="0"><defs><linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" style="stop-color:var(--surface)"/><stop offset="100%" style="stop-color:var(--surface-2)"/></linearGradient><linearGradient id="proGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--aubergine);stop-opacity:.22"/><stop offset="100%" style="stop-color:var(--aubergine);stop-opacity:0"/></linearGradient></defs></svg>
 
 <div class="lock" id="lock">
   <div class="lk-brand">Swanne.</div>
@@ -734,10 +940,11 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
 <div class="welcome" id="welcome">
   <div class="wc-inner">
     <div class="wc-brand">Swanne<span class="brand-dot">.</span></div>
-    <p class="wc-lead">Votre carnet privé pour suivre vos symptômes au quotidien. Vos données restent sur cet appareil : rien n'est envoyé ailleurs sans votre accord (export ou sauvegarde Google Drive).</p>
+    <p class="wc-lead" id="wc-lead">Votre carnet privé pour suivre vos symptômes au quotidien. Vos données restent sur cet appareil : rien n'est envoyé ailleurs sans votre accord (export ou sauvegarde Google Drive). Sans sauvegarde, elles ne vous suivent pas sur un autre appareil.</p>
     <label class="wc-label" for="wc-name">Comment souhaitez-vous que l'application vous appelle ?</label>
     <input type="text" id="wc-name" class="txt" placeholder="Votre prénom (facultatif)" maxlength="30" autocomplete="off">
     <button class="btn btn-primary" id="wc-start" style="width:100%;margin-top:18px">Commencer</button>
+    <button class="btn btn-ghost" id="wc-restore" style="width:100%;margin-top:10px">J'ai déjà une sauvegarde</button>
     <p class="wc-fine">Vous pourrez le modifier à tout moment dans les réglages.</p>
     <p class="wc-fine" style="margin-top:22px;line-height:1.5">Swanne. n’est pas un dispositif médical et ne pose aucun diagnostic. Pour tout avis médical, diagnostic ou traitement, consultez un professionnel de santé.<br><a href="confidentialite.html" target="_blank" rel="noopener" style="color:var(--aubergine)">Politique de confidentialité</a></p>
   </div>
@@ -944,6 +1151,14 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
       <div style="margin-top:14px"><div class="lbl">Retour haptique (légère vibration)</div><div class="seg" id="haptic-seg"></div></div>
     </div>
 
+    <div class="card rmd rmd-card" id="rmd-card" style="display:none">
+      <h2 style="font-size:18px;margin-bottom:4px">Petit rappel</h2>
+      <p class="sec-note" style="margin:0 0 10px">Un signe discret pour penser à noter votre journée, seulement si vous le souhaitez.</p>
+      <div class="seg" id="rmd-onoff"></div>
+      <div id="rmd-warn-slot"></div>
+      <div id="rmd-body"></div>
+    </div>
+
     <div class="card">
       <h2 style="font-size:18px;margin-bottom:8px">Prochain rendez-vous</h2>
       <p class="sec-note">L'appli affichera un rappel discret et orientera le récapitulatif en vue de ce rendez-vous.</p>
@@ -987,11 +1202,12 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
 </main>
 
 <div id="print-region"></div>
+<div id="top-sentinel" aria-hidden="true" style="position:absolute;top:0;left:0;width:1px;height:6px;pointer-events:none"></div>
 
 <div class="save-bar" id="save-bar">
   <div class="inner">
-    <span class="saved-flash" id="saved-flash">C'est noté ✓</span>
-    <button class="btn btn-primary" id="save-btn">Enregistrer ma journée</button>
+    <span class="saved-flash" id="saved-flash" role="status" aria-live="polite"></span>
+    <button class="btn btn-primary" id="save-btn"><span class="sb-label">Enregistrer ma journée</span><span class="sb-done" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7" pathLength="1"/></svg>C'est noté</span></button>
   </div>
 </div>
 
@@ -1024,6 +1240,18 @@ html[data-theme="dark"] .rg-thumb{box-shadow:0 1px 2px rgba(0,0,0,.5),0 4px 12px
     <input type="range" min="1" max="10" step="1" value="5" id="crise-range">
     <div class="scale-cue"><span>légère</span><span>insupportable</span></div>
     <div class="mbtns"><button class="btn btn-ghost" id="crise-cancel" style="flex:1">Annuler</button><button class="btn btn-primary" id="crise-ok" style="flex:1">Ajouter</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="ask-bg">
+  <div class="modal ask-modal" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
+    <h3 id="ask-title"></h3>
+    <div class="ask-text" id="ask-text"></div>
+    <input class="txt" id="ask-input" type="text" autocomplete="off" style="display:none">
+    <div class="ask-actions">
+      <button class="btn btn-primary" id="ask-ok">OK</button>
+      <button class="btn" id="ask-cancel">Annuler</button>
+    </div>
   </div>
 </div>
 
@@ -1098,12 +1326,14 @@ const BODY_ZONES={tete:{fig:"front",x:50,y:19},ovaire_d:{fig:"front",x:40,y:82},
 
 /* ===== Stockage durable : window.storage -> IndexedDB -> localStorage ===== */
 const STORE_KEY="repere-endo-v1", CONFIG_KEY="repere-config-v1";
-const SCHEMA=10;const APP_VERSION="82";let BOOT_T=Date.now();let trendZone="";
+const SCHEMA=10;const APP_VERSION="92";const NATIVE=!!window.SwNative;let BOOT_T=Date.now();let trendZone="";
 let DATA={}, CFG={pains:[],dig:[],gen:[],ptypes:[],labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};
 
 const idb={db:null,async open(){if(this.db)return this.db;if(!window.indexedDB)return null;return new Promise(res=>{const r=indexedDB.open("repere",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>res(null);});},
   async get(k){const db=await this.open();if(!db)return null;return new Promise(res=>{const t=db.transaction("kv").objectStore("kv").get(k);t.onsuccess=()=>res(t.result??null);t.onerror=()=>res(null);});},
-  async set(k,v){const db=await this.open();if(!db)return false;return new Promise(res=>{const t=db.transaction("kv","readwrite").objectStore("kv").put(v,k);t.onsuccess=()=>res(true);t.onerror=()=>res(false);});}};
+  async set(k,v){const db=await this.open();if(!db)return false;return new Promise(res=>{const t=db.transaction("kv","readwrite").objectStore("kv").put(v,k);t.onsuccess=()=>res(true);t.onerror=()=>res(false);});},
+  /* v90 : plusieurs clés dans une seule transaction (tout ou rien) */
+  async setMany(pairs){const db=await this.open();if(!db)return false;return new Promise(res=>{const tx=db.transaction("kv","readwrite"),st=tx.objectStore("kv");pairs.forEach(([k,v])=>st.put(v,k));tx.oncomplete=()=>res(true);tx.onerror=tx.onabort=()=>res(false);});}};
 
 async function rawGet(key){
   if(window.storage&&window.storage.get){try{const r=await window.storage.get(key);return r&&r.value?r.value:null;}catch(e){return null;}}
@@ -1119,11 +1349,48 @@ async function rawSet(key,val){
   try{localStorage.setItem(key,val);ok=true;}catch(e){}
   return ok;
 }
-async function loadData(){const v=await rawGet(STORE_KEY);try{return v?JSON.parse(v):{};}catch(e){return {};}}
-async function saveData(){return await rawSet(STORE_KEY,JSON.stringify(DATA));}
-async function saveConfig(){return await rawSet(CONFIG_KEY,JSON.stringify(CFG));}
+/* v90 : deux copies (IndexedDB + localStorage) que l'on n'écrase plus à l'aveugle.
+   Chaque enregistrement est accompagné d'un compteur, rangé à côté (clé « …#gen ») pour que le format
+   des données lui-même ne change pas. À l'ouverture on lit LES DEUX copies et l'on garde la plus récente
+   (à défaut de compteur — données d'avant la v90 — celle qui contient le plus d'éléments).
+   Une copie illisible est mise de côté avant de pouvoir être remplacée ; si aucune n'est lisible,
+   l'utilisatrice est prévenue. */
+let dataGen=0,cfgGen=0,storeUnreadable=[];
+async function rawSetGen(key,val,gen){
+  if(window.storage&&window.storage.set)return rawSet(key,val);
+  let ok=false;
+  try{if(await idb.setMany([[key,val],[key+"#gen",gen]]))ok=true;}catch(e){}
+  try{localStorage.setItem(key,val);localStorage.setItem(key+"#gen",String(gen));ok=true;}catch(e){}
+  return ok;
+}
+async function readBest(key){
+  const cands=[];
+  if(window.storage&&window.storage.get){const v=await rawGet(key);if(v!=null)cands.push([v,0]);}
+  else{
+    try{const v=await idb.get(key);if(v!=null)cands.push([v,+(await idb.get(key+"#gen"))||0]);}catch(e){}
+    try{const v=localStorage.getItem(key);if(v!=null)cands.push([v,+localStorage.getItem(key+"#gen")||0]);}catch(e){}
+  }
+  let best=null;const bad=[];
+  cands.forEach(([raw,gen])=>{
+    let p;
+    if(raw===""){if(!gen)return; p={val:null,gen,n:-1};} /* effacement total ; ancien format (sans compteur) : ignoré face à une copie lisible */
+    else{let o=null;try{o=JSON.parse(raw);}catch(e){}
+      if(!o||typeof o!=="object"||Array.isArray(o)){bad.push(raw);return;}
+      p={val:o,gen,n:Object.keys(o).length};}
+    if(!best||p.gen>best.gen||(p.gen===best.gen&&p.n>best.n))best=p;
+  });
+  if(bad.length){
+    try{await idb.set(key+"-illisible",bad[0]);}catch(e){}
+    try{localStorage.setItem(key+"-illisible",bad[0]);}catch(e){}
+    if(!best)storeUnreadable.push(key);
+  }
+  return best||{val:null,gen:0};
+}
+async function loadData(){const b=await readBest(STORE_KEY);dataGen=b.gen||0;return b.val||{};}
+async function saveData(){dataGen++;return await rawSetGen(STORE_KEY,JSON.stringify(DATA),dataGen);}
+async function saveConfig(){cfgGen++;return await rawSetGen(CONFIG_KEY,JSON.stringify(CFG),cfgGen);}
 async function loadConfig(){
-  const v=await rawGet(CONFIG_KEY); let c=null; try{c=v?JSON.parse(v):null;}catch(e){c=null;}
+  const bc=await readBest(CONFIG_KEY); let c=bc.val; cfgGen=bc.gen||0;
   if(!c){c={pains:DEF_PAINS.map(x=>x[0]),dig:DEF_DIG.map(x=>x[0]),gen:DEF_GEN.map(x=>x[0]),fog:DEF_FOG.map(x=>x[0]),food:DEF_FOOD.map(x=>x[0]),ptypes:DEF_PTYPES.map(x=>x[0]),labels:{},treatments:[],questions:[],appointment:"",name:"",onboarded:false,theme:"light",pin:"",lastBackup:"",driveClientId:"",driveConnected:false,driveAuto:false,driveFileId:"",driveLastBackup:"",version:SCHEMA};[...DEF_PAINS,...DEF_DIG,...DEF_GEN,...DEF_FOG,...DEF_FOOD,...DEF_PTYPES].forEach(([k,l])=>c.labels[k]=l);c.labels.dyspareunie="Après les rapports";CFG=c;await saveConfig();}
   else{c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.labels=c.labels||{};c.treatments=c.treatments||[];c.theme=(c.theme==="dark")?"dark":"light";c.pin=c.pin||"";c.lastBackup=c.lastBackup||"";c.name=c.name||"";CFG=c;migrate();}
   CFG.labels.regles="Règles";CFG.labels.spotting="Spotting";
@@ -1309,7 +1576,7 @@ async function placeZone(fig,x,y){
   addZoneMode=false;
   const w=document.getElementById("bodymap-wrap");if(w)w.classList.remove("addmode");
   const s=snapZone(fig,x,y);
-  const label=cleanText(window.prompt("Nom de cette zone (ex. hanche gauche, périnée, aine…)"),60);
+  const label=cleanText(await askText({title:"Nommer cette zone",text:"Par exemple : hanche gauche, périnée, aine…",ok:"Ajouter la zone",input:{placeholder:"Nom de la zone",max:60}}),60);
   if(!label){buildBodyMap();paintBodyMap();return;}
   const id=newKey("z");
   if(!Array.isArray(CFG.customZones))CFG.customZones=[]; /* v66 : manquait au tout premier lancement */
@@ -1325,7 +1592,7 @@ async function placeZone(fig,x,y){
 }
 async function deleteZone(id){
   const z=(CFG.customZones||[]).find(z=>z.id===id);if(!z)return;
-  if(!window.confirm("Supprimer la zone « "+(CFG.labels[id]||"cette zone")+" » ? Les douleurs déjà enregistrées resteront dans l'historique."))return;
+  if(!(await askConfirm({title:"Supprimer cette zone ?",text:"« "+(CFG.labels[id]||"cette zone")+" » sera retirée de la silhouette.\nLes douleurs déjà enregistrées restent dans l'historique.",ok:"Supprimer la zone",danger:true})))return;
   buzz(18);
   CFG.customZones=CFG.customZones.filter(z=>z.id!==id);
   CFG.pains=CFG.pains.filter(k=>k!==id);
@@ -1340,7 +1607,8 @@ function bindHot(c){
   const k=c.dataset.k, custom=c.dataset.custom==="1";
   if(!custom){ c.onclick=()=>{ if(addZoneMode)return; openModal(k); }; return; }
   const svg=c.closest("svg");
-  const THRESH=4; let startX=0,startY=0,moved=false,dragging=false,lpTimer=null,pid=null;
+  const THRESH=8; /* v87 : 8 px, comme Android — un toucher qui tremble un peu reste un toucher, pas un déplacement */
+  let startX=0,startY=0,moved=false,dragging=false,lpTimer=null,pid=null;
   const clearLP=()=>{ if(lpTimer){clearTimeout(lpTimer);lpTimer=null;} };
   c.style.cursor="grab";
   c.addEventListener("pointerdown",evt=>{
@@ -1369,6 +1637,9 @@ function bindHot(c){
     pid=null;dragging=false;moved=false;
   };
   c.addEventListener("pointerup",finish);
+  /* v88 : Chrome ignore touch-action sur les éléments SVG ; sans ceci, un glissé vertical
+     faisait défiler la page au lieu de déplacer la zone. */
+  c.addEventListener("touchmove",e=>{if(pid!=null&&e.cancelable)e.preventDefault();},{passive:false});
   c.addEventListener("pointercancel",()=>{ clearLP();c.classList.remove("dragging");c.setAttribute("r","10");pid=null;dragging=false;moved=false; });
 }
 function buildBodyMap(){
@@ -1393,8 +1664,7 @@ function buildBodyMap(){
     });
   });
   const ab=document.getElementById("zone-add");if(ab)ab.onclick=startAddZone;
-  wrap.addEventListener("contextmenu",e=>e.preventDefault());
-  wrap.addEventListener("selectstart",e=>e.preventDefault());
+  if(!wrap._noMenu){wrap._noMenu=true;wrap.addEventListener("contextmenu",e=>e.preventDefault());wrap.addEventListener("selectstart",e=>e.preventDefault());}
 }
 function paintBodyMap(){
   document.querySelectorAll("#bodymap-wrap .hot").forEach(c=>{
@@ -1407,17 +1677,51 @@ function paintBodyMap(){
   });
   renderRibbon();
 }
+/* ===== v86 : confirmations et saisies au style de l'appli (remplacent confirm / prompt / alert) =====
+   askSheet({title, text, ok, cancel, danger, input:{placeholder,max,value}, alert}) → Promise :
+   confirmation → true / false ; saisie → texte ou null ; information → true */
+let askResolve=null,askIsInput=false;
+function askClose(v){
+  const bg=document.getElementById("ask-bg");if(!bg)return;
+  bg.classList.remove("show");
+  const r=askResolve;askResolve=null;
+  if(r)r(v===null?(askIsInput?null:false):v);
+}
+function askSheet(o){
+  return new Promise(res=>{
+    if(askResolve)askClose(null);
+    askResolve=res;askIsInput=!!o.input;
+    document.getElementById("ask-title").textContent=o.title||"";
+    const tx=document.getElementById("ask-text");tx.innerHTML="";
+    String(o.text||"").split(/\n\s*\n|\n/).filter(x=>x.trim()).forEach((line,i)=>{const p=document.createElement("p");p.textContent=line.trim();if(o.strongFirst&&i===0)p.className="ask-strong";tx.appendChild(p);});
+    const inp=document.getElementById("ask-input");
+    inp.style.display=o.input?"block":"none";
+    if(o.input){inp.value=o.input.value||"";inp.placeholder=o.input.placeholder||"";inp.maxLength=o.input.max||60;}
+    const ok=document.getElementById("ask-ok"),cancel=document.getElementById("ask-cancel");
+    ok.textContent=o.ok||"OK";ok.classList.toggle("danger",!!o.danger);
+    cancel.style.display=o.alert?"none":"";cancel.textContent=o.cancel||"Annuler";
+    ok.onclick=()=>askClose(o.input?inp.value:true);
+    cancel.onclick=()=>askClose(null);
+    inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();askClose(inp.value);}};
+    document.getElementById("ask-bg").classList.add("show");
+    if(o.input)setTimeout(()=>{try{inp.focus();}catch(_){}} ,260);
+  });
+}
+const askConfirm=o=>askSheet(o);
+const askText=o=>askSheet(Object.assign({},o,{input:o.input||{}}));
+const askInfo=o=>askSheet(Object.assign({ok:"Compris"},o,{alert:true}));
 /* ===== v69 : feuilles — glisser vers le bas, bouton retour, Échap ===== */
 const SHEET_DISMISS={
   "modal-bg":()=>dismissModal(),
   "crise-bg":()=>document.getElementById("crise-cancel").click(),
   "restore-bg":()=>document.getElementById("restore-cancel").click(),
   "help-bg":()=>document.getElementById("help-ok").click(),
-  "wn-bg":()=>document.getElementById("wn-ok").click()
+  "wn-bg":()=>document.getElementById("wn-ok").click(),
+  "ask-bg":()=>askClose(null)
 };
 function dismissSheet(id){const f=SHEET_DISMISS[id];if(f)f();else{const b=document.getElementById(id);if(b)b.classList.remove("show");}}
 function openSheets(){return [...document.querySelectorAll(".modal-bg.show")];}
-let sheetStack=[],sheetPopping=false,sheetBackPending=0;
+let sheetStack=[],sheetPopping=false,sheetBackPending=0,pressSeq=0; /* pressSeq : numéro du dernier appui (doigt ou souris) */
 function setupSheets(){
   document.querySelectorAll(".modal-bg").forEach(bg=>{
     const m=bg.querySelector(".modal");if(!m||m.querySelector(".sheet-grab"))return;
@@ -1438,7 +1742,7 @@ function setupSheets(){
     /* suivre ouverture / fermeture pour le bouton retour */
     new MutationObserver(()=>{
       const on=bg.classList.contains("show"), i=sheetStack.indexOf(bg.id);
-      if(on&&i<0){m.scrollTop=0; /* v70 : toujours rouvrir en haut, poignée visible */
+      if(on&&i<0){m.scrollTop=0;bg._openSeq=pressSeq; /* v70 : toujours rouvrir en haut, poignée visible */
         sheetStack.push(bg.id);try{history.pushState({swanneSheet:bg.id},"");}catch(_){}}
       else if(!on&&i>=0){sheetStack.splice(i,1);
         if(sheetPopping)sheetPopping=false;
@@ -1453,6 +1757,15 @@ function setupSheets(){
       const bg=document.getElementById(id);if(bg&&bg.classList.contains("show")){sheetPopping=false;try{history.pushState({swanneSheet:id},"");}catch(_){}}}
   });
   document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;const o=openSheets();if(o.length)dismissSheet(o[o.length-1].id);});
+  /* v87 : « clic fantôme ». Une feuille ouverte au relâché du doigt (zone ajoutée sur la silhouette)
+     ou pendant un appui long (suppression d'une zone) recevait ensuite le clic de ce même toucher,
+     sur son fond : elle se refermait aussitôt. Un clic sur le fond ne ferme la feuille que si
+     l'appui a commencé après son ouverture. */
+  document.addEventListener("pointerdown",()=>{pressSeq++;},true);
+  document.addEventListener("click",e=>{
+    const bg=e.target;
+    if(bg&&bg.classList&&bg.classList.contains("modal-bg")&&bg._openSeq!=null&&pressSeq<=bg._openSeq){e.stopPropagation();e.preventDefault();}
+  },true);
 }
 /* ===== v66 : le fil des jours (remplace les flèches ‹ ›) ===== */
 function renderRibbon(){
@@ -1769,9 +2082,9 @@ function renderTreatEditor(){
       <input class="te-name" placeholder="Nom du traitement" maxlength="60" value="${esc(t.name||"")}">
       <div class="te-grid">
         <div class="te-field full"><label>Dosage</label><input class="te-dose" placeholder="Ex. 2 mg/jour" maxlength="40" value="${esc(t.dosage||"")}"></div>
-        <div class="te-field"><label>Date de début</label><input type="date" class="te-start" value="${esc(t.start||"")}"></div>
-        <div class="te-field"><label>Date d'arrêt</label><input type="date" class="te-end" value="${esc(t.end||"")}"></div>
-        <div class="te-field"><label>Efficacité estimée (si non suivie au quotidien)</label><select class="te-eff">${effOpts}</select></div>
+        <div class="te-field"><label>Date de début</label><input type="date" class="te-start" aria-label="Date de début du traitement" value="${esc(t.start||"")}"></div>
+        <div class="te-field"><label>Date d'arrêt</label><input type="date" class="te-end" aria-label="Date d'arrêt du traitement" value="${esc(t.end||"")}"></div>
+        <div class="te-field"><label>Efficacité estimée (si non suivie au quotidien)</label><select class="te-eff" aria-label="Efficacité estimée du traitement">${effOpts}</select></div>
         <div class="te-field"><label>Effets secondaires</label><input class="te-side" placeholder="Ex. Fatigue, aucun…" maxlength="60" value="${esc(t.side||"")}"></div>
       </div>
       <button class="te-del" type="button">Retirer ce traitement</button>`;
@@ -1785,7 +2098,7 @@ function renderTreatEditor(){
     card.querySelector(".te-side").addEventListener("input",e=>upd("side",e.target.value));
     card.querySelector(".te-del").addEventListener("click",async()=>{
       const nm=(CFG.treatments.find(x=>x.id===t.id)||{}).name||"ce traitement";
-      if(confirm('Retirer « '+nm+' » ?\nLes journées déjà enregistrées sont conservées.')){
+      if(await askConfirm({title:"Retirer ce traitement ?",text:"« "+nm+" » ne sera plus proposé.\nLes journées déjà enregistrées sont conservées.",ok:"Retirer",danger:true})){
         CFG.treatments=CFG.treatments.filter(x=>x.id!==t.id);await saveConfig();renderTreatEditor();buildTreatList();syncTreat();
       }
     });
@@ -1852,7 +2165,7 @@ function refreshAppointment(){
 }
 function renderApptArea(){
   const area=document.getElementById("appt-area");if(!area)return;
-  area.innerHTML=`<div class="add-row"><input type="date" class="txt" id="appt-input" value="${CFG.appointment||""}" min="${todayStr()}"><button class="btn-add" id="appt-clear" style="background:var(--surface);border:1px solid var(--line);color:var(--ink)">Effacer</button></div>
+  area.innerHTML=`<div class="add-row"><input type="date" class="txt" id="appt-input" aria-label="Date du prochain rendez-vous" value="${CFG.appointment||""}" min="${todayStr()}"><button class="btn-add" id="appt-clear" style="background:var(--surface);border:1px solid var(--line);color:var(--ink)">Effacer</button></div>
   <label class="sec-note" for="lastappt-input" style="display:block;margin:12px 0 4px">Date du dernier rendez-vous (active le récap « depuis le dernier RDV »)</label>
   <div class="add-row"><input type="date" class="txt" id="lastappt-input" value="${CFG.lastAppt||""}" max="${todayStr()}"><button class="btn-add" id="lastappt-clear" style="background:var(--surface);border:1px solid var(--line);color:var(--ink)">Effacer</button></div>`;
   document.getElementById("appt-input").onchange=async e=>{CFG.appointment=e.target.value||"";await saveConfig();refreshAppointment();toast(CFG.appointment?"Rendez-vous noté":"Rendez-vous effacé");};
@@ -1871,7 +2184,7 @@ function paintTypePills(container,selected,editable){
     b.onclick=()=>{ if(b._lp){b._lp=false;return;} const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);else selected.push(k);b.classList.toggle("on",selected.includes(k)); };
     if(editable){
       let lt=null;
-      b.addEventListener("pointerdown",()=>{lt=setTimeout(async()=>{b._lp=true; if(window.confirm("Retirer le type « "+labelOf(k)+" » de la liste  ?")){const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);await removeSymptom("ptypes",k);paintTypePills(container,selected,true);}},600);});
+      b.addEventListener("pointerdown",()=>{b._lp=false;lt=setTimeout(async()=>{b._lp=true; if(await askConfirm({title:"Retirer ce type de douleur ?",text:"« "+labelOf(k)+" » ne sera plus proposé dans la liste.\nLes journées déjà enregistrées sont conservées.",ok:"Retirer",danger:true})){const i=selected.indexOf(k);if(i>=0)selected.splice(i,1);await removeSymptom("ptypes",k);paintTypePills(container,selected,true);}},600);});
       const cx=()=>{if(lt){clearTimeout(lt);lt=null;}};
       b.addEventListener("pointerup",cx);b.addEventListener("pointermove",cx);b.addEventListener("pointerleave",cx);b.addEventListener("pointercancel",cx);
     }
@@ -1879,7 +2192,7 @@ function paintTypePills(container,selected,editable){
   });
   if(editable){
     const add=document.createElement("button");add.type="button";add.className="chip chip-add";add.textContent="＋ Type";
-    add.onclick=async()=>{const lbl=cleanText(window.prompt("Nouveau type de douleur (ex. tiraillement, brûlure…)"),40);if(!lbl)return;const nk=newKey("t");CFG.labels[nk]=lbl;CFG.ptypes.push(nk);await saveConfig();if(typeof renderSettings==="function")renderSettings();selected.push(nk);paintTypePills(container,selected,true);};
+    add.onclick=async()=>{const lbl=cleanText(await askText({title:"Nouveau type de douleur",text:"Par exemple : tiraillement, brûlure…",ok:"Ajouter",input:{placeholder:"Type de douleur",max:40}}),40);if(!lbl)return;const nk=newKey("t");CFG.labels[nk]=lbl;CFG.ptypes.push(nk);await saveConfig();if(typeof renderSettings==="function")renderSettings();selected.push(nk);paintTypePills(container,selected,true);};
     container.appendChild(add);
     const hint=document.createElement("div");hint.style.cssText="font-size:10.5px;color:var(--ink-faint);margin-top:6px;width:100%;";hint.textContent="Touchez pour (dé)sélectionner · appui long pour retirer un type";container.appendChild(hint);
   }else if(!list.length){container.innerHTML='<span style="font-size:12.5px;color:var(--ink-faint)">Aucun type configuré (réglages).</span>';}
@@ -2030,18 +2343,50 @@ function autoStash(){
     DATA[curDate]=rec;saveData();refreshReminder();scheduleDriveBackup();
   }
 }
+/* v88 : quand l'appli passe en arrière-plan, la journée modifiée est mise à l'abri (Android peut
+   fermer l'appli ensuite). Copie immédiate dans une petite clé, effacée dès que l'enregistrement
+   complet a réussi ; si l'appli a été fermée avant, la copie est reprise au lancement suivant. */
+const STASH_KEY="repere-stash-v1";
+function stashNow(){
+  try{
+    if(!entry||(entryIsEmpty(entry)&&!entry.ras))return;
+    const rec=entryRecord();
+    if(stableStr(rec)===stableStr(DATA[curDate]||null))return;
+    DATA[curDate]=rec;
+    try{localStorage.setItem(STASH_KEY,JSON.stringify({d:curDate,r:rec}));}catch(e){}
+    saveData().then(ok=>{if(ok){try{localStorage.removeItem(STASH_KEY);}catch(e){}}});
+    refreshReminder();scheduleDriveBackup();if(typeof rmdSync==="function")rmdSync();
+  }catch(e){}
+}
+function applyPendingStash(){
+  let st=null;try{st=JSON.parse(localStorage.getItem(STASH_KEY)||"null");}catch(e){}
+  if(!st||!st.d||!st.r||!isYmd(st.d))return false;
+  DATA[st.d]=st.r;return true;
+}
+/* Reprise : si le jour a changé pendant que l'appli était en arrière-plan, la journée du jour
+   s'affiche (sauf si l'on consultait volontairement un autre jour). */
+let shownToday="";
+function onAppVisible(){
+  const t=todayStr();
+  if(!shownToday){shownToday=t;return;}
+  if(t===shownToday)return;
+  const wasToday=curDate===shownToday;shownToday=t;
+  if(wasToday)setDate(t);else setDate(curDate);
+  updateGreeting();refreshReminder();
+}
 function reloadApp(){location.reload();}
 /* Effacement total — honore le droit à l'effacement annoncé dans la politique.
    Double confirmation + rappel d'export. Ne touche pas à la sauvegarde Drive
    (compte personnel de l'utilisatrice), mais le rappelle explicitement. */
 async function wipeAll(){
-  const c1=window.confirm("Effacer TOUTES vos données de cet appareil ?\n\nToutes vos journées, zones, traitements et réglages seront définitivement supprimés. Cette action est irréversible.\n\nConseil : exportez d'abord vos données (Réglages → Exporter) si vous voulez pouvoir les retrouver.");
+  const c1=await askConfirm({title:"Effacer toutes vos données ?",strongFirst:true,text:"Toutes vos journées, zones, traitements et réglages seront définitivement supprimés de cet appareil. Cette action est irréversible.\nConseil : exportez d'abord vos données (Réglages → Exporter) si vous voulez pouvoir les retrouver.",ok:"Continuer",danger:true});
   if(!c1)return;
-  const c2=window.confirm("Dernière confirmation.\n\nAprès l'effacement, l'application redémarrera comme au premier jour. Si vous aviez activé la sauvegarde Google Drive, pensez aussi à supprimer le fichier « swanne-backup » dans votre Drive.\n\nEffacer définitivement ?");
+  const c2=await askConfirm({title:"Dernière confirmation",text:"Après l'effacement, l'application redémarrera comme au premier jour.\nSi vous aviez activé la sauvegarde Google Drive, pensez aussi à supprimer le fichier « swanne-backup » dans votre Drive.",ok:"Effacer définitivement",danger:true});
   if(!c2)return;
   DATA={};
-  await rawSet(STORE_KEY,"");
-  await rawSet(CONFIG_KEY,"");
+  if(NATIVE&&SwNative.backup){try{await SwNative.backup.set(false);}catch(e){}}
+  await rawSetGen(STORE_KEY,"",dataGen+1);
+  await rawSetGen(CONFIG_KEY,"",cfgGen+1);
   buzz(20);
   reloadApp();
 }
@@ -2050,16 +2395,17 @@ async function saveCurrent(silent){
   else DATA[curDate]=entryRecord();
   const ok=await saveData();
   document.getElementById("delete-day").style.display=DATA[curDate]?"block":"none";
-  if(!ok&&!silent){alert("L'enregistrement a échoué : le stockage de l'appareil semble plein ou indisponible. Par sécurité, exportez vos données (Réglages → Exporter), libérez de l'espace, puis réessayez.");return;}
-  if(!silent){buzz(12);const f=document.getElementById("saved-flash");f.classList.add("show");setTimeout(()=>f.classList.remove("show"),1600);}
-  refreshReminder();scheduleDriveBackup();renderRibbon();
+  if(!ok&&!silent){buzz(30);askInfo({title:"L'enregistrement a échoué",text:"Le stockage de l'appareil semble plein ou indisponible.\nPar sécurité, exportez vos données (Réglages → Exporter), libérez de l'espace, puis réessayez."});return;}
+  if(!silent){buzz(12);const f=document.getElementById("saved-flash");f.textContent="";setTimeout(()=>{f.textContent="Journée enregistrée";},30);
+    const sb=document.getElementById("save-btn");if(sb){clearTimeout(sb._t);sb.classList.remove("done");void sb.offsetWidth;sb.classList.add("done");sb._t=setTimeout(()=>sb.classList.remove("done"),1500);}}
+  refreshReminder();rmdAfterSave();scheduleDriveBackup();renderRibbon();
 }
 async function deleteDay(){
   if(!DATA[curDate])return;
   const backup=DATA[curDate],d=curDate;
-  delete DATA[curDate];await saveData();
+  delete DATA[curDate];await saveData();rmdSync();
   loadEntryFor(curDate);syncForm();
-  showSnack("Journée effacée",async()=>{DATA[d]=backup;await saveData();if(curDate===d){loadEntryFor(d);syncForm();}toast("Restaurée");});
+  showSnack("Journée effacée",async()=>{DATA[d]=backup;await saveData();rmdSync();if(curDate===d){loadEntryFor(d);syncForm();}toast("Restaurée");});
 }
 
 /* ===== Snackbar / toast ===== */
@@ -2075,9 +2421,178 @@ function toast(msg){const s=document.getElementById("snack");document.getElement
 function hideSnack(){document.getElementById("snack").classList.remove("show");}
 
 /* ===== Bannières (rappel + sauvegarde) ===== */
-function refreshReminder(){
-  const slot=document.getElementById("reminder-slot");if(slot)slot.innerHTML="";
+/* ===== Petit rappel (v87, appli Android uniquement) =====
+   Désactivé par défaut. L'autorisation d'Android n'est demandée que lorsque l'utilisatrice
+   active elle-même le rappel. On ne prévoit jamais plus de RMD_WINDOW rappels d'avance :
+   si l'appli n'est plus ouverte, Swanne. se tait après trois rappels et reprend au retour. */
+const RMD_DEF={on:false,time:"20:30",days:[1,2,3,4,5,6,0],style:"vibration",msg:0,skipDone:true,pauseUntil:""};
+const RMD_MSGS=[["Doux","Un moment pour noter votre journée, si vous le souhaitez."],["Question","Comment s'est passée votre journée ?"],["Bref","Petit rappel, quand vous aurez un moment."]];
+const RMD_STYLES=[["silencieux","Silencieux","Le rappel attend dans vos notifications, sans son ni vibration."],["vibration","Vibration","Une courte vibration, sans son."],["son","Son","Le son de notification habituel de votre téléphone."]];
+const RMD_DAYS=[[1,"L","lundi"],[2,"M","mardi"],[3,"M","mercredi"],[4,"J","jeudi"],[5,"V","vendredi"],[6,"S","samedi"],[0,"D","dimanche"]];
+const RMD_WINDOW=3;
+let rmdQ=Promise.resolve(),rmdState={},rmdWant=false;
+function rmdAvailable(){return NATIVE&&!!(window.SwNative&&SwNative.notif);}
+function rmd(){
+  const c=(CFG.reminder&&typeof CFG.reminder==="object")?CFG.reminder:{};
+  const R=Object.assign({},RMD_DEF,c);
+  R.on=R.on===true;R.skipDone=R.skipDone!==false;
+  if(!/^\d{2}:\d{2}$/.test(R.time))R.time=RMD_DEF.time;
+  R.days=(Array.isArray(R.days)?R.days:RMD_DEF.days).filter((d,i,a)=>Number.isInteger(d)&&d>=0&&d<=6&&a.indexOf(d)===i);
+  if(!RMD_STYLES.some(x=>x[0]===R.style))R.style=RMD_DEF.style;
+  if(!RMD_MSGS[R.msg])R.msg=0;
+  if(typeof R.pauseUntil!=="string"||(R.pauseUntil&&R.pauseUntil<todayStr()))R.pauseUntil="";
+  CFG.reminder=R;return R;
 }
+/* Les prochains rappels (au plus RMD_WINDOW), en heure locale : jours choisis, hors pause,
+   jamais dans la minute qui vient, et pas le jour déjà noté si l'option est cochée. */
+function rmdPlan(now){
+  const R=rmd();if(!R.on||!R.days.length)return [];
+  const hm=R.time.split(":").map(Number),out=[];
+  for(let d=0;d<40&&out.length<RMD_WINDOW;d++){
+    const t=new Date(now.getFullYear(),now.getMonth(),now.getDate()+d,hm[0],hm[1],0,0);
+    if(!R.days.includes(t.getDay()))continue;
+    const k=ymd(t);
+    if(R.pauseUntil&&k<=R.pauseUntil)continue;
+    if(t.getTime()<=now.getTime()+60000)continue;
+    if(R.skipDone&&DATA[k])continue;
+    out.push({id:+k.replace(/-/g,""),at:t.getTime(),title:"Swanne.",body:RMD_MSGS[R.msg][1]});
+  }
+  return out;
+}
+/* Remplace les rappels prévus par le plan du moment (appels mis en file : jamais deux à la fois). */
+function rmdSync(){
+  if(!rmdAvailable())return Promise.resolve();
+  rmdQ=rmdQ.then(async()=>{
+    const R=rmd();
+    try{rmdState=(await SwNative.notif.replace(rmdPlan(new Date()),R.style))||{};}
+    catch(e){rmdState={error:String(e&&e.message||e)};}
+  }).catch(()=>{});
+  return rmdQ;
+}
+function rmdTimeTxt(t){const p=String(t).split(":");return (+p[0])+" h"+(p[1]&&p[1]!=="00"?" "+p[1]:"");}
+function rmdWhen(ms){
+  const t=new Date(ms),now=new Date(),k=ymd(t);
+  const hh=rmdTimeTxt(String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0"));
+  const eve=t.getHours()>=18;
+  if(k===todayStr())return (eve?"ce soir":"aujourd'hui")+" à "+hh;
+  if(k===ymd(new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)))return (eve?"demain soir":"demain")+" à "+hh;
+  return t.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" à "+hh;
+}
+async function rmdSet(patch){const R=rmd();Object.assign(R,patch);CFG.reminder=R;await saveConfig();await rmdSync();renderReminder();}
+async function rmdTurnOn(opt){
+  const fromNudge=!!(opt&&opt.fromNudge);
+  let p=await SwNative.notif.perm();
+  if(p!=="granted")p=await SwNative.notif.ask();
+  if(p!=="granted"){if(fromNudge){toast("Notifications refusées : le rappel reste désactivé");return;}rmdWant=true;renderReminder();return;}
+  rmdWant=false;
+  const R=rmd();R.on=true;CFG.rmdInvite=Object.assign(CFG.rmdInvite||{},{done:true});
+  await saveConfig();await rmdSync();await renderReminder();refreshReminder();buzz(12);
+  const nx=rmdPlan(new Date())[0],msg=nx?"Rappel activé : "+rmdWhen(nx.at):"Rappel activé";
+  if(fromNudge)showSnack(msg,rmdGoSettings,"Régler");else toast(msg);
+}
+async function rmdTurnOff(){
+  rmdWant=false;const R=rmd();if(!R.on){renderReminder();return;}
+  R.on=false;await saveConfig();await rmdSync();renderReminder();toast("Rappel désactivé");
+}
+function rmdOnResume(){
+  if(!rmdAvailable())return;
+  (async()=>{
+    if(rmdWant&&!rmd().on&&await SwNative.notif.perm()==="granted"){rmdTurnOn();return;}
+    await rmdSync();
+    const st=document.getElementById("view-settings");if(st&&st.classList.contains("on"))renderReminder();
+    if(rmdNudgeDay!==todayStr()){window.__wnAuto=false;rmdNudgeDecide();}
+    refreshReminder();
+  })();
+}
+let rmdOpen=false;
+function rmdDaysTxt(days){
+  const s=[...days].sort((x,y)=>((x+6)%7)-((y+6)%7)),k=s.join(",");
+  if(s.length===7)return "tous les jours";
+  if(k==="1,2,3,4,5")return "en semaine";
+  if(k==="6,0")return "le week-end";
+  const N=["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+  return s.map(d=>N[d]).join(", ");
+}
+function rmdGoSettings(){rmdOpen=true;showTab("settings");requestAnimationFrame(()=>{const c=document.getElementById("rmd-card");if(c)c.scrollIntoView({block:"center",behavior:"smooth"});});}
+/* Carte compacte : un résumé d'une ligne ; le détail reste replié derrière « Modifier ». */
+async function renderReminder(){
+  const card=document.getElementById("rmd-card");if(!card)return;
+  if(!rmdAvailable()){card.style.display="none";return;}
+  card.style.display="";
+  const R=rmd();
+  const onoff=document.getElementById("rmd-onoff");
+  onoff.innerHTML=[["on","Activé"],["off","Désactivé"]].map(([k,l])=>`<button class="chip" data-k="${k}">${l}</button>`).join("");
+  onoff.querySelectorAll(".chip").forEach(b=>{b.classList.toggle("on",b.dataset.k===(R.on?"on":"off"));b.setAttribute("aria-pressed",String(b.classList.contains("on")));b.onclick=()=>b.dataset.k==="on"?rmdTurnOn():rmdTurnOff();});
+  const perm=await SwNative.notif.perm();
+  const ws=document.getElementById("rmd-warn-slot"),body=document.getElementById("rmd-body");
+  const stl=RMD_STYLES.find(x=>x[0]===R.style);
+  if(perm!=="granted"&&(R.on||rmdWant))ws.innerHTML=`<div class="rmd-warn">Les notifications de Swanne. sont bloquées par Android : le rappel ne peut pas s'afficher.<button class="rmd-link" id="rmd-open-settings">Les autoriser dans les réglages d'Android</button></div>`;
+  else if(R.on&&rmdState&&rmdState.blocked)ws.innerHTML=`<div class="rmd-warn">« ${stl[1]} » est coupé dans les réglages d'Android : choisissez une autre façon de prévenir, ou réactivez-la.<button class="rmd-link" id="rmd-open-settings">Ouvrir les réglages d'Android</button></div>`;
+  else ws.innerHTML="";
+  const os=document.getElementById("rmd-open-settings");if(os)os.onclick=()=>SwNative.notif.openSettings().catch(()=>toast("Ouvrez Réglages → Applis → Swanne. → Notifications"));
+  if(!R.on){body.innerHTML="";return;}
+  const today=todayStr(),plan=rmdPlan(new Date()),paused=!!R.pauseUntil;
+  const [th,tm]=R.time.split(":").map(Number);
+  const tonight=new Date();tonight.setHours(th,tm,0,0);
+  const doneToday=R.skipDone&&!!DATA[today]&&R.days.includes(new Date().getDay())&&tonight.getTime()>Date.now()&&!paused;
+  const line2=paused?`En pause jusqu'au ${prettyDate(R.pauseUntil)} inclus`
+    :plan.length?`Prochain : ${rmdWhen(plan[0].at).replace(/ à \d+ h( \d+)?$/,"")}`:"Aucun rappel prévu";
+  body.innerHTML=`
+    <div class="rmd-sum"><div class="rmd-sum-t">${rmdTimeTxt(R.time)} · ${rmdDaysTxt(R.days)} · ${stl[1].toLowerCase()}<span class="rmd-sum-n" role="status">${line2}</span></div>${paused?`<button class="rmd-link" id="rmd-resume">Reprendre</button>`:""}<button class="rmd-link" id="rmd-more" aria-expanded="${rmdOpen}" aria-controls="rmd-opts">${rmdOpen?"Fermer":"Modifier"}</button></div>
+    <div class="rmd-opts" id="rmd-opts"${rmdOpen?"":" hidden"}>
+      <div class="lbl">Heure</div>
+      <input type="time" class="txt rmd-time" id="rmd-time" value="${R.time}" aria-label="Heure du rappel">
+      <div class="lbl">Jours</div>
+      <div class="rmd-days" id="rmd-days">${RMD_DAYS.map(([d,l,full])=>{const on=R.days.includes(d);return `<button class="chip${on?" on":""}" data-d="${d}" aria-label="${full}" aria-pressed="${on}">${l}</button>`;}).join("")}</div>
+      <div class="lbl">Façon de prévenir</div>
+      <div class="seg" id="rmd-style">${RMD_STYLES.map(([k,l])=>`<button class="chip${k===R.style?" on":""}" data-k="${k}">${l}</button>`).join("")}</div>
+      <p class="rmd-sub">${stl[2]}</p>
+      <div class="lbl">Message</div>
+      <div class="seg" id="rmd-msg">${RMD_MSGS.map(([l],i)=>`<button class="chip${i===R.msg?" on":""}" data-i="${i}">${l}</button>`).join("")}</div>
+      <p class="rmd-sub" id="rmd-msg-txt">« ${RMD_MSGS[R.msg][1]} »</p>
+      <label class="bilat"><input type="checkbox" id="rmd-skip"${R.skipDone?" checked":""}><span>Pas de rappel si ma journée est déjà notée</span></label>
+      ${paused?"":`<div class="lbl">Faire une pause</div><div class="seg" id="rmd-pause">${[[3,"3 jours"],[7,"1 semaine"],[14,"2 semaines"]].map(([n,l])=>`<button class="chip" data-n="${n}">${l}</button>`).join("")}</div>`}
+      <button class="rmd-link" id="rmd-test" style="padding:12px 0 0">Voir un exemple</button>
+      <p class="rmd-foot">Le message ne parle jamais de santé. Si vous n'ouvrez plus l'appli, il s'arrête après trois rappels.</p>
+    </div>`;
+  const $=id=>document.getElementById(id);
+  $("rmd-more").onclick=()=>{const o=$("rmd-opts");o.hidden=!o.hidden;rmdOpen=!o.hidden;$("rmd-more").textContent=rmdOpen?"Fermer":"Modifier";$("rmd-more").setAttribute("aria-expanded",String(rmdOpen));};
+  if($("rmd-resume"))$("rmd-resume").onclick=async()=>{await rmdSet({pauseUntil:""});toast("Le rappel reprend");};
+  if($("rmd-pause"))$("rmd-pause").querySelectorAll(".chip").forEach(b=>b.onclick=async()=>{const n=+b.dataset.n,d=new Date();const until=ymd(new Date(d.getFullYear(),d.getMonth(),d.getDate()+n-1));await rmdSet({pauseUntil:until});toast("Pause jusqu'au "+prettyDate(until)+" inclus");});
+  $("rmd-time").onchange=e=>{const v=e.target.value;if(/^\d{2}:\d{2}$/.test(v))rmdSet({time:v});else e.target.value=R.time;};
+  $("rmd-days").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{const d=+b.dataset.d;let days=R.days.slice();
+    if(days.includes(d)){if(days.length===1){toast("Gardez au moins un jour, ou désactivez le rappel");return;}days=days.filter(x=>x!==d);}else days.push(d);
+    rmdSet({days});});
+  $("rmd-style").querySelectorAll(".chip").forEach(b=>b.onclick=()=>rmdSet({style:b.dataset.k}));
+  $("rmd-msg").querySelectorAll(".chip").forEach(b=>b.onclick=()=>rmdSet({msg:+b.dataset.i}));
+  $("rmd-skip").onchange=e=>rmdSet({skipDone:e.target.checked});
+  $("rmd-test").onclick=async()=>{const r=rmd();try{const res=await SwNative.notif.preview({id:1,title:"Swanne.",body:RMD_MSGS[r.msg][1]},r.style);if(res&&res.denied){renderReminder();return;}toast("Exemple envoyé : regardez vos notifications");}catch(e){toast("Exemple impossible : "+(e&&e.message||e));}};
+}
+/* Proposition discrète, ponctuelle : une seule ligne, décidée à l'ouverture de l'appli.
+   Deux fois en tout au plus (la seconde, quinze jours après la première), après trois journées notées.
+   « Oui » active le rappel (réglages par défaut, modifiables ensuite) ; « Non merci » ou un rappel déjà réglé : plus jamais. */
+let rmdNudge=false,rmdNudgeDay="";
+function rmdNudgeDecide(){
+  const today=todayStr();rmdNudgeDay=today;rmdNudge=false;
+  if(!rmdAvailable()||!CFG.onboarded)return;
+  const R=rmd(),I=CFG.rmdInvite=Object.assign({n:0,last:"",done:false},CFG.rmdInvite||{});
+  if(R.on||I.done||Object.keys(DATA).length<3||window.__wnAuto)return;
+  const bs=document.getElementById("backup-slot");if(bs&&bs.innerHTML.trim())return;
+  if(I.last===today){rmdNudge=true;return;}
+  if(I.n>=2){I.done=true;saveConfig();return;}
+  if(I.n>=1&&I.last&&Math.round((parseYmd(today)-parseYmd(I.last))/864e5)<14)return;
+  I.n++;I.last=today;saveConfig();rmdNudge=true;
+}
+function refreshReminder(){
+  const slot=document.getElementById("reminder-slot");if(!slot)return;slot.innerHTML="";
+  if(!rmdNudge)return;
+  const I=CFG.rmdInvite||{};
+  if(rmd().on||I.done){rmdNudge=false;return;}
+  slot.innerHTML=`<div class="rmd-nudge"><span>Envie d'un petit rappel le soir ?</span><button class="y" id="rmd-inv-yes">Oui</button><span aria-hidden="true">·</span><button id="rmd-inv-no">Non merci</button></div>`;
+  document.getElementById("rmd-inv-no").onclick=()=>{I.done=true;rmdNudge=false;saveConfig();slot.innerHTML="";};
+  document.getElementById("rmd-inv-yes").onclick=()=>{I.done=true;rmdNudge=false;saveConfig();slot.innerHTML="";rmdTurnOn({fromNudge:true});};
+}
+function rmdAfterSave(){if(!rmdAvailable())return;rmdSync();if(curDate===todayStr()&&DATA[curDate])SwNative.notif.clearShown();}
 function refreshBackup(){
   const slot=document.getElementById("backup-slot");slot.innerHTML="";
   const days = CFG.lastBackup ? (Date.now()-new Date(CFG.lastBackup).getTime())/864e5 : 999;
@@ -2110,7 +2625,7 @@ function renderSettings(){
   body.innerHTML=cats.map(([cat,title])=>`<div class="card"><h2 style="font-size:18px;margin-bottom:12px">${title}</h2><div class="set-list" id="setlist-${cat}"></div><div class="add-row"><input type="text" class="txt" id="add-${cat}" placeholder="Ajouter…" maxlength="48"><button class="btn-add" data-cat="${cat}">Ajouter</button></div></div>`).join("");
   cats.forEach(([cat])=>fillSetList(cat));
   renderTreatEditor();
-  renderTheme();renderPin();renderApptArea();renderProfile();renderDrive();
+  renderTheme();renderPin();renderApptArea();renderProfile();renderDrive();renderReminder();
   document.querySelectorAll("#settings-body .btn-add").forEach(b=>b.onclick=()=>{const inp=document.getElementById("add-"+b.dataset.cat);addSymptom(b.dataset.cat,inp.value);inp.value="";});
   document.querySelectorAll("#settings-body .add-row .txt").forEach(inp=>inp.addEventListener("keydown",e=>{if(e.key==="Enter"){const cat=inp.id.replace("add-","");addSymptom(cat,inp.value);inp.value="";}}));
 }
@@ -2118,7 +2633,7 @@ function fillSetList(cat){
   const list=document.getElementById("setlist-"+cat);if(!list)return;
   const items = cat==="treatments" ? CFG.treatments.map(t=>[t.id,t.name]) : CFG[cat].map(k=>[k,labelOf(k)]);
   list.innerHTML = items.length ? items.map(([k,l])=>`<div class="set-item"><span>${l}</span><button class="rm" data-cat="${cat}" data-k="${k}" aria-label="Retirer">×</button></div>`).join("") : `<div class="set-empty">Aucun pour l'instant.</div>`;
-  list.querySelectorAll(".rm").forEach(b=>b.onclick=()=>{const lab=cat==="treatments"?(CFG.treatments.find(t=>t.id===b.dataset.k)||{}).name:labelOf(b.dataset.k);if(confirm('Retirer « '+lab+' » ?\nLes journées déjà enregistrées sont conservées.'))removeSymptom(b.dataset.cat,b.dataset.k);});
+  list.querySelectorAll(".rm").forEach(b=>b.onclick=async()=>{const lab=cat==="treatments"?(CFG.treatments.find(t=>t.id===b.dataset.k)||{}).name:labelOf(b.dataset.k);if(await askConfirm({title:"Retirer de la liste ?",text:"« "+lab+" » ne sera plus proposé.\nLes journées déjà enregistrées sont conservées.",ok:"Retirer",danger:true}))removeSymptom(b.dataset.cat,b.dataset.k);});
 }
 function renderTheme(){
   const seg=document.getElementById("theme-seg");
@@ -2142,12 +2657,14 @@ function applyTheme(){
      — dont l'ancien "auto", supprimé — retombe sur le thème clair. */
   const t=(CFG.theme==="dark")?"dark":"light";
   document.documentElement.setAttribute("data-theme",t);
+  if(NATIVE)SwNative.setBarsDark(t==="dark");
   /* v66 : les couleurs d'intensité dépendent du thème */
   try{if(document.getElementById("fil")){paintBodyMap();refreshPainValues();refreshFatigue();}}catch(e){}
 }
 
 /* ===== Profil / Accueil initial ===== */
-function showWelcome(){const w=document.getElementById("welcome"),i=document.getElementById("wc-name");if(!w)return;i.value=CFG.name||"";w.classList.add("show");setTimeout(()=>i.focus(),120);}
+function showWelcome(){const w=document.getElementById("welcome"),i=document.getElementById("wc-name");if(!w)return;
+  if(NATIVE){const l=document.getElementById("wc-lead");if(l)l.textContent="Votre carnet privé pour suivre vos symptômes au quotidien. Vos données restent sur ce téléphone : rien n'est envoyé ailleurs sans votre accord. Si vous changez de téléphone, seule une sauvegarde les retrouve (fichier exporté, ou copie de secours à activer dans Réglages).";}i.value=CFG.name||"";w.classList.add("show");setTimeout(()=>i.focus(),120);}
 async function finishWelcome(){const i=document.getElementById("wc-name");CFG.name=i.value.trim();CFG.onboarded=true;await saveConfig();document.getElementById("welcome").classList.remove("show");updateGreeting();}
 function renderProfile(){const ni=document.getElementById("name-input");if(!ni)return;ni.value=CFG.name||"";const save=document.getElementById("name-save");save.onclick=async()=>{CFG.name=ni.value.trim();await saveConfig();updateGreeting();toast("Profil mis à jour");};ni.onkeydown=e=>{if(e.key==="Enter")save.click();};}
 
@@ -2459,18 +2976,33 @@ function lineSvg(series,opts){
   const plotW=W-padL-padR,plotH=H-padT-padB;
   const sx=i=>padL+(n<=1?plotW/2:i*plotW/(n-1)),sy=v=>padT+(1-v/10)*plotH;
   let grid="";[0,5,10].forEach(g=>{const y=sy(g);grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${(W-padR).toFixed(1)}" y2="${y.toFixed(1)}" class="lc-grid"/><text x="${(padL-5).toFixed(1)}" y="${(y+2.8).toFixed(1)}" class="lc-axis" text-anchor="end">${g}</text>`;});
-  let dline="",pen=false;const pts=[];
-  series.forEach((s,i)=>{if(s.v==null){pen=false;return;}const x=sx(i),y=sy(s.v);pts.push([x,y]);dline+=(pen?` L`:` M`)+x.toFixed(1)+" "+y.toFixed(1);pen=true;});
-  let darea="";if(pts.length>1){darea="M"+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1)+pts.slice(1).map(p=>" L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join("")+` L${pts[pts.length-1][0].toFixed(1)} ${(padT+plotH).toFixed(1)} L${pts[0][0].toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;}
+  /* v86 : segments de jours consécutifs ; les trous courts (≤ 7 j) sont reliés en pointillés, les jours isolés restent visibles */
+  const segs=[];let cur=null,lastI=-1;const pts=[];
+  series.forEach((s,i)=>{if(s.v==null)return;const p=[sx(i),sy(s.v),i];pts.push(p);
+    if(cur&&i===lastI+1)cur.push(p);else{cur=[p];segs.push(cur);}lastI=i;});
+  const f=v=>v.toFixed(1),base=f(padT+plotH);
+  let dline="",darea="",dgap="",dpts="";
+  /* aire continue tant que les trous restent courts (elle suit les pointillés) ; coupée seulement sur un long trou */
+  let run=[];const flush=()=>{if(run.length>1)darea+=" M"+f(run[0][0])+" "+base+" L"+run.map(p=>f(p[0])+" "+f(p[1])).join(" L")+" L"+f(run[run.length-1][0])+" "+base+" Z";run=[];};
+  segs.forEach((sg,k)=>{
+    if(sg.length>1)dline+=" M"+sg.map(p=>f(p[0])+" "+f(p[1])).join(" L");
+    else dpts+=`<circle cx="${f(sg[0][0])}" cy="${f(sg[0][1])}" r="2" class="lc-pt"/>`;
+    run=run.concat(sg);
+    const nx=segs[k+1];
+    if(nx){const a=sg[sg.length-1],b=nx[0];if(b[2]-a[2]<=8)dgap+=` M${f(a[0])} ${f(a[1])} L${f(b[0])} ${f(b[1])}`;else flush();}
+  });
+  flush();
   const last=pts.length?pts[pts.length-1]:null;
   let xlab="";
   if(opts.xStart)xlab+=`<text x="${padL}" y="${(H-6).toFixed(1)}" class="lc-axis" text-anchor="start">${opts.xStart}</text>`;
   if(opts.xEnd)xlab+=`<text x="${(W-padR).toFixed(1)}" y="${(H-6).toFixed(1)}" class="lc-axis" text-anchor="end">${opts.xEnd}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" class="linechart" role="img" aria-label="Évolution de la douleur sur 10">
-    <text x="2" y="${(padT+2).toFixed(1)}" class="lc-axis lc-unit">/10</text>
+    <text x="${(W-padR).toFixed(1)}" y="${(padT-2.5).toFixed(1)}" class="lc-axis lc-unit" text-anchor="end">/10</text>
     ${grid}
     ${darea?`<path d="${darea}" class="lc-area"/>`:""}
-    <path d="${dline}" class="lc-line"/>
+    ${dgap?`<path d="${dgap}" class="lc-gap"/>`:""}
+    ${dline?`<path d="${dline}" class="lc-line"/>`:""}
+    ${dpts}
     ${last?`<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" class="lc-dot"/>`:""}
     ${xlab}
   </svg>`;
@@ -2499,7 +3031,7 @@ function renderTrack(){
   const typeEntries=Object.entries(A.typeFreq).sort((a,b)=>b[1]-a[1]);
   const zones=[...A.painKeys].sort((a,b)=>(A.freq[b]||0)-(A.freq[a]||0));
   if(!zones.includes(trendZone))trendZone=zones[0]||"";
-  const zoneCard=zones.length?`<div class="card"><h2 style="font-size:18px;margin-bottom:4px">Historique par zone</h2><p class="sec-note" style="margin-bottom:10px">L'évolution d'une localisation précise — utile pour montrer au médecin comment une zone se comporte dans le temps.</p><select id="zone-pick" class="txt" style="margin-bottom:10px">${zones.map(k=>`<option value="${k}"${k===trendZone?" selected":""}>${esc(labelOf(k))}</option>`).join("")}</select><div id="zone-line"></div></div>`:"";
+  const zoneCard=zones.length?`<div class="card"><h2 style="font-size:18px;margin-bottom:4px">Historique par zone</h2><p class="sec-note" style="margin-bottom:10px">L'évolution d'une localisation précise — utile pour montrer au médecin comment une zone se comporte dans le temps.</p><select id="zone-pick" class="txt" aria-label="Zone à afficher" style="margin-bottom:10px">${zones.map(k=>`<option value="${k}"${k===trendZone?" selected":""}>${esc(labelOf(k))}</option>`).join("")}</select><div id="zone-line"></div></div>`:"";
   const typeCard=typeEntries.length?`<div class="card"><h2 style="font-size:18px;margin-bottom:4px">Type de douleur ressenti</h2><p class="sec-note" style="margin-bottom:14px">Nombre de fois où chaque ressenti a été coché sur la période.</p>${barListHtml(typeEntries.map(([k,v],i)=>({label:labelOf(k),value:v,color:PALETTE[(i+3)%PALETTE.length]})))}</div>`:"";
   body.innerHTML=`
     <div class="stat-grid">
@@ -2594,6 +3126,7 @@ function bestFood(A){
   return best;
 }
 const sgn=x=>(x>=0?"+":"−")+f1(Math.abs(x));
+const fdiff=(a,b)=>{const d=Math.round(a*10)-Math.round(b*10);return d===0?"0":(d>0?"+":"−")+f1(Math.abs(d)/10);}; /* écart entre deux moyennes telles qu'affichées (arrondies) */
 /* Ligne « Depuis tel traitement », commune au PDF et au texte */
 function treatRespText(t,ts,html){
   const b=html?(s=>`<b>${s}</b>`):(s=>s);
@@ -2686,7 +3219,7 @@ function buildReportHtml(days,forPrint,metaExtra){
   const sd=stressDiff(A);if(sd.ok)ins.push(`Les jours de <b>stress élevé</b>, la douleur est en moyenne de <b>${f1(sd.ma)}/10</b>, contre <b>${f1(sd.mb)}/10</b> les jours plus calmes. <span style="color:var(--ink-faint)">(${sd.na} j vs ${sd.nb} j)</span>`);
   const crossSec=ins.length?`<section class="rp-sec"><h3>Observations croisées</h3><p class="rp-cap">Comparaisons calculées hors jours de règles, retenues seulement si l'écart est peu compatible avec le hasard — indicatives, un lien observé n'est pas une cause.</p>${ins.map(s=>`<p style="margin:0 0 6px">${s}</p>`).join("")}</section>`:"";
   const foodRows=foodInsights(A.dates);
-  const foodTbl=foodRows.length?`<table class="rp-ttable"><thead><tr><th>Aliment</th><th class="num">Jours</th><th>Douleur moy.</th></tr></thead><tbody>${foodRows.map(r=>`<tr><td><b>${esc(labelOf(r.k))}</b></td><td class="num">${r.cnt}</td><td class="te-eff">${f1(r.withAvg)}/10<div class="te-meta">sans : ${f1(r.woAvg)}/10 (${r.woCnt} j)</div></td></tr>`).join("")}</tbody></table>`:"";
+  const foodTbl=foodRows.length?`<table class="rp-ttable rp-food"><thead><tr><th>Aliment</th><th class="num">Les jours avec</th><th class="num">Les autres jours</th><th class="num">Écart</th></tr></thead><tbody>${foodRows.map(r=>`<tr><td><b>${esc(labelOf(r.k))}</b></td><td class="num"><span class="fv">${f1(r.withAvg)}/10</span><div class="te-meta">${r.cnt} j</div></td><td class="num"><span class="fv">${f1(r.woAvg)}/10</span><div class="te-meta">${r.woCnt} j</div></td><td class="num${r.robust?" em":""}">${fdiff(r.withAvg,r.woAvg)}</td></tr>`).join("")}</tbody></table>`:"";
   const topFood=foodRows.find(r=>r.robust);
   const foodLead=topFood?`<p style="margin:0 0 10px">Écart régulier : les jours avec « ${esc(labelOf(topFood.k))} », la douleur est en moyenne plus élevée — <b>${f1(topFood.withAvg)}/10</b> contre <b>${f1(topFood.woAvg)}/10</b> les autres jours.</p>`:"";
   const foodSpan=assocSpanTxt(foodRows.meta,A.dates);
@@ -2778,11 +3311,11 @@ function buildReportHtml(days,forPrint,metaExtra){
     ${(forPrint&&(CFG.printName||CFG.birthdate))?`<div class="rp-meta" style="margin:-4px 0 2px">Suivi de <b>${esc(CFG.printName||CFG.name||"")}</b>${CFG.birthdate?` · née le ${frDMY(CFG.birthdate)}`:""}</div>`:""}
     <div class="rp-meta">${period} · ${A.total} jours${metaExtra?" · "+metaExtra:""}${(CFG.appointment&&parseYmd(CFG.appointment)>=parseYmd(todayStr()))?" · en vue du rendez-vous du "+prettyDate(CFG.appointment).replace(/ /g," "):""}</div>
     ${synthSec}
-    <div class="rp-figures">${figures}</div>
-    <p class="rp-prose">${prose}</p>
-    <section class="rp-sec"><h3>Calendrier d'intensité</h3><p class="rp-cap">Chaque case = un jour ; couleur = douleur maximale (0–10), crises comprises.</p>
+    <section class="rp-sec rp-calsec"><h3>Calendrier d'intensité</h3><p class="rp-cap">Chaque case = un jour ; couleur = douleur maximale (0–10), crises comprises.</p>
       <div id="cal-doc"></div>
       <div class="legend"><span>0</span><div class="scale" id="legend-scale-doc"></div><span>10</span><span style="margin-left:6px;color:var(--ink-faint)">douleur /10</span><span style="margin-left:8px"><span class="dot"></span>règles</span></div></section>
+    <div class="rp-figures">${figures}</div>
+    <p class="rp-prose">${prose}</p>
     ${painSec}
     ${otherSec}
     ${energySec}
@@ -2798,6 +3331,21 @@ function buildReportHtml(days,forPrint,metaExtra){
     ${cmpSec}
     ${(forPrint&&CFG.questions.length)?`<section class="rp-sec"><h3>Questions pour le médecin</h3><ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">${CFG.questions.map(q=>`<li>${q.text}</li>`).join("")}</ul></section>`:""}
     </div>`;
+}
+/* v86 : chaque feuille imprimée porte le nom (s'il est renseigné), la période et « page x / n »,
+   pour qu'une feuille séparée ou scannée dans un dossier reste identifiable. */
+function setPrintPages(A){
+  let st=document.getElementById("print-pages");
+  if(!st){st=document.createElement("style");st.id="print-pages";document.head.appendChild(st);}
+  if(!A||!A.dates||!A.dates.length){st.textContent="";return;}
+  const q=x=>'"'+String(x).replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/[\r\n]+/g," ")+'"';
+  const who=(CFG.printName||"").trim();
+  const id=(who?who+(CFG.birthdate?" · née le "+frDMY(CFG.birthdate):"")+" · ":"")+"Récapitulatif du "+frDMY(A.dates[0])+" au "+frDMY(A.dates[A.dates.length-1]);
+  const box='font-family:"IBM Plex Sans",sans-serif;font-size:8pt;color:#5B5364;';
+  st.textContent=`@media print{@page{@top-left{content:${q(id)};${box}vertical-align:bottom;padding-bottom:2mm;}`+
+    `@bottom-left{content:"Swanne. · document rédigé à partir des saisies de la patiente";${box}vertical-align:top;padding-top:2mm;}`+
+    `@bottom-right{content:"page " counter(page) " / " counter(pages);${box}vertical-align:top;padding-top:2mm;}}`+
+    `@page:first{@top-left{content:none;}}}`;
 }
 function rdvRange(){
   if(!CFG.lastAppt)return null;
@@ -2823,7 +3371,7 @@ function reportPlainText(days,metaExtra){
   const topTypes=k=>tbp[k]?Object.entries(tbp[k]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([tk])=>labelOf(tk).toLowerCase()).join(", "):"";
   const painList=Object.entries(A.freq).filter(([k])=>A.painKeys.has(k)).sort((a,b)=>b[1]-a[1]);
   const hideDysp=!!A.freq.rapports;const otherList=Object.entries(A.freq).filter(([k])=>!A.painKeys.has(k)&&!(hideDysp&&k==="dyspareunie")).sort((a,b)=>b[1]-a[1]);
-  const secs=[];const sec=(title,lines)=>{lines=lines.filter(Boolean);if(lines.length)secs.push(title+"\n"+lines.map(l=>"  - "+l).join("\n"));};
+  const secs=[];const sec=(title,lines)=>{lines=lines.filter(Boolean);if(lines.length)secs.push(title+"\n"+lines.map(l=>l.startsWith("\t")?"      "+l.slice(1):"  - "+l).join("\n"));};
   let head=`RÉCAPITULATIF DES SYMPTÔMES\n${(CFG.printName||CFG.birthdate)?`Suivi de ${CFG.printName||CFG.name||""}${CFG.birthdate?" · née le "+frDMY(CFG.birthdate):""}\n`:""}${frDMY(A.dates[0])} → ${frDMY(A.dates[A.dates.length-1])} (${A.total} jours)${metaExtra?" — "+metaExtra:""}`;
   secs.push("À RETENIR\n"+synthItems(A,P).map(s=>"• "+s.t).join("\n"));
   secs.push(`CHIFFRES-CLÉS\n• Jours notés : ${A.loggedDays}/${A.total}\n• Jours de douleur : ${A.painDays} (dont ${A.sevDays} ≥ 6/10)\n• Intensité moyenne les jours douloureux : ${A.avgMax?f1(A.avgMax)+"/10":"—"}`+
@@ -2842,7 +3390,7 @@ function reportPlainText(days,metaExtra){
    if(ci.fogOk)L.push(`Brouillard cérébral : ${pct(ci.hiPainFog,ci.hiPainDays)} % des jours de douleur ≥ 6/10 contre ${pct(ci.loPainFog,ci.loPainDays)} % des jours plus faibles (${ci.hiPainDays} j vs ${ci.loPainDays} j)`);
    const sd=stressDiff(A);if(sd.ok)L.push(`Stress élevé → douleur moy. ${f1(sd.ma)}/10 contre ${f1(sd.mb)}/10 les jours plus calmes (${sd.na} j vs ${sd.nb} j)`);
    sec("OBSERVATIONS CROISÉES (hors règles, indicatives — un lien n'est pas une cause)",L);}
-  {const fr=foodInsights(A.dates);const fsp=assocSpanTxt(fr.meta,A.dates);const L=fr.map(r=>`${labelOf(r.k)} : ${f1(r.withAvg)}/10 sur ${r.cnt} j (sans : ${f1(r.woAvg)}/10 sur ${r.woCnt} j)${r.robust?" — écart régulier":""}`);
+  {const fr=foodInsights(A.dates);const fsp=assocSpanTxt(fr.meta,A.dates);const L=fr.map(r=>`${labelOf(r.k)} : ${f1(r.withAvg)}/10 les jours avec (${r.cnt} j) · ${f1(r.woAvg)}/10 les autres jours (${r.woCnt} j) · écart ${fdiff(r.withAvg,r.woAvg)}${r.robust?" — écart régulier":""}`);
    const tn=foodNextDayInsights(A.dates).find(r=>r.robust);if(tn)L.push(`Le lendemain de ${labelOf(tn.k).toLowerCase()} : la douleur varie de ${sgn(tn.withCh)} point en moyenne, contre ${sgn(tn.woCh)} après les autres jours (${tn.cnt} j vs ${tn.woCnt} j)`);
    sec(`ALIMENTATION & DOULEURS (hors règles, jours où l'alimentation est renseignée${fsp?", "+fsp:""} — indicatif)`,L);}
   if(A.painDays){const ph=PHASES.filter(p=>A.phaseCnt[p]);sec("DOULEUR PAR PHASE DU CYCLE (jours sans douleur comptés à 0)",ph.map(p=>`${p} : ${f1(A.phasePain[p]/A.phaseCnt[p])}/10 (${A.phaseCnt[p]} j${A.phaseCnt[p]<5?", peu de jours":""})`));}
@@ -2856,9 +3404,9 @@ function reportPlainText(days,metaExtra){
    sec("PROFIL DE LA DOULEUR",L);}
   {const named=(CFG.treatments||[]).filter(x=>x&&(x.name||"").trim());const r=A.reliefStat,totR=(r.oui||0)+(r.peu||0)+(r.non||0);const L=[];
    named.forEach(x=>{const per=treatPeriod(x);const ts=treatStats(x,A.dates);const mb=[x.dosage,per];if(ts.obs!=null)mb.push(`pris ${ts.obs} % des jours renseignés`);const nt=(A.medTakes||{})[x.id]||0,nd=(A.medDaysTaken||{})[x.id]||0;if(nt)mb.push(`${nt} ${plr(nt,"prise","prises")} sur ${nd} ${plr(nd,"jour","jours")}`);
-     const rel=reliefText(A.medStat&&A.medStat[x.id]);const eff=rel?`${rel.txt} (sur ${rel.n} ${plr(rel.n,"jour renseigné","jours renseignés")})`:((x.eff!==""&&x.eff!=null)?`${x.eff}/10 (estimée)`:"—");
-     L.push(`${x.name}${mb.filter(Boolean).length?" ("+mb.filter(Boolean).join(" · ")+")":""} : soulagement ${eff}${x.side?` · effets : ${x.side}`:""}`);
-     const rt=treatRespText(x,ts,false);if(rt)L.push(`    ${rt}`.replace(/ /g," "));});
+     const rel=reliefText(A.medStat&&A.medStat[x.id]);const eff=rel?`ressenti ${rel.txt} (sur ${rel.n} ${plr(rel.n,"jour renseigné","jours renseignés")})`:((x.eff!==""&&x.eff!=null)?`efficacité estimée ${x.eff}/10`:"");
+     const tail=[eff,x.side?`effets : ${x.side}`:""].filter(Boolean).join(" · ");L.push(`${x.name}${mb.filter(Boolean).length?" ("+mb.filter(Boolean).join(" · ")+")":""}${tail?" : "+tail:""}`);
+     const rt=treatRespText(x,ts,false);if(rt)L.push(`\t↳ ${rt}`.replace(/ /g," "));});
    if(totR)L.push(`Jours où le soulagement a été noté : soulagé ${r.oui||0} · un peu ${r.peu||0} · sans effet ${r.non||0}`);
    sec("TRAITEMENTS",L);}
   if(A.badSleepCnt>=5&&A.okSleepCnt>=5)sec("SOMMEIL & DOULEUR (hors règles, indicatif)",[`Après une mauvaise nuit : ${f1(A.badSleepSum/A.badSleepCnt)}/10 · après une nuit correcte : ${f1(A.okSleepSum/A.okSleepCnt)}/10 (${A.badSleepCnt} j vs ${A.okSleepCnt} j)`]);
@@ -2873,36 +3421,65 @@ function reportPlainText(days,metaExtra){
 }
 
 /* ===== Exports & sauvegarde ===== */
-function download(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+function download(name,content,type){if(NATIVE){SwNative.saveFile(name,content,type).catch(e=>{if(!/cancel/i.test(String(e&&e.message||e)))toast("Enregistrement impossible : "+(e&&e.message||e));});return;}const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
 function buildBackupJson(){return JSON.stringify({app:"reperes",version:SCHEMA,exported:new Date().toISOString(),data:DATA,config:CFG},null,2);}
 async function markBackup(){CFG.lastBackup=new Date().toISOString();await saveConfig();refreshBackup();}
 async function exportData(){await markBackup();download(`swanne-sauvegarde-${todayStr()}.json`,buildBackupJson(),"application/json");}
 async function shareBackup(){
   const json=buildBackupJson(),fname=`swanne-sauvegarde-${todayStr()}.json`;
   await markBackup();
+  if(NATIVE){try{await SwNative.saveFile(fname,json,"application/json");}catch(e){if(!/cancel/i.test(String(e&&e.message||e)))toast("Enregistrement impossible : "+(e&&e.message||e));}return;}
   try{
     if(navigator.canShare){const file=new File([json],fname,{type:"application/json"});if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Sauvegarde Swanne"});return;}}
   }catch(e){if(e&&e.name==="AbortError")return;}
   download(fname,json,"application/json");toast("Sauvegarde téléchargée");
 }
+/* v90 : export tableur complet (alimentation, brouillard, fatigue, traitements, contexte, règles)
+   et cellules entre guillemets dès qu'elles contiennent ; " ou un retour à la ligne. Les éléments retirés
+   des listes mais présents dans l'historique gardent leur colonne. */
 function exportCSV(){
-  const keys=[...new Set([...CFG.pains,...Object.keys(CFG.labels).filter(k=>k!=="regles"&&k!=="spotting")])];
-  const dates=Object.keys(DATA).sort();
-  const head=["date","regles","spotting","flux","sommeil","stress","activite","rien_a_signaler","crises","note",...keys.map(labelOf)];
-  const rows=[head.join(";")];
-  dates.forEach(d=>{const e=DATA[d];const row=[d,(e.regles||e.cycle==="regles")?1:0,(e.spotting||e.cycle==="spotting")?1:0,e.regles?(e.flux||""):"",e.ctx?.sommeil||"",e.ctx?.stress||"",e.ctx?.activite||"",e.ras?1:0,(e.crises||[]).length,'"'+String(e.note||"").replace(/"/g,'""')+'"'];keys.forEach(k=>{if(e.pains&&e.pains[k]!=null)row.push(e.pains[k]);else if((e.dig||[]).includes(k)||(e.gen||[]).includes(k))row.push(1);else row.push("");});rows.push(row.join(";"));});
-  download(`swanne-donnees-${todayStr()}.csv`,"\uFEFF"+rows.join("\n"),"text/csv");
+  const q=v=>{const t=v==null?"":String(v);return /[;"\r\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const dates=Object.keys(DATA).filter(isYmd).sort();
+  const seen={pains:new Set(),dig:new Set(),gen:new Set(),fog:new Set(),food:new Set(),meds:new Set()};
+  dates.forEach(d=>{const e=DATA[d]||{};Object.keys(e.pains||{}).forEach(k=>seen.pains.add(k));["dig","gen","fog","food"].forEach(c=>(e[c]||[]).forEach(k=>seen[c].add(k)));Object.keys(e.meds||{}).forEach(k=>seen.meds.add(k));});
+  const ordered=(cat)=>{const base=(CFG[cat]||[]).slice();seen[cat].forEach(k=>{if(!base.includes(k))base.push(k);});return base.filter(k=>k!=="regles"&&k!=="spotting");};
+  const pains=ordered("pains"),cats=["dig","gen","fog","food"].map(c=>[c,ordered(c)]);
+  const tre=(CFG.treatments||[]).map(t=>t.id);seen.meds.forEach(k=>{if(!tre.includes(k))tre.push(k);});
+  const tName=id=>{const t=(CFG.treatments||[]).find(x=>x.id===id);return (t&&t.name)||"Traitement";};
+  const CAT={dig:"Digestif",gen:"Général",fog:"Brouillard",food:"Alimentation"};
+  const head=["Date","Règles","Spotting","Flux","Protections","Caillots","Débordement","Fatigue (0-10)","Sommeil","Stress","Activité physique","Impact sur la journée","Humeur","Journée d'absence","Rien à signaler","Crises (nombre)","Crises (intensité max)","Note",
+    ...pains.map(k=>"Douleur : "+labelOf(k)+" (0-10)"),
+    ...cats.flatMap(([c,ks])=>ks.map(k=>CAT[c]+" : "+labelOf(k))),
+    ...tre.flatMap(id=>[tName(id)+" (prises)",tName(id)+" (soulagement)"])];
+  const RELIEF={oui:"soulagé",peu:"un peu",non:"non"};
+  const rows=[head.map(q).join(";")];
+  dates.forEach(d=>{const e=DATA[d]||{},c=e.ctx||{},cr=e.crises||[];
+    const row=[d,e.regles?1:0,e.spotting?1:0,e.regles?(e.flux||""):"",e.protections||"",e.caillots?1:"",e.inondation?1:"",e.fatigue||"",c.sommeil||"",c.stress||"",c.activite||"",c.impact||"",c.mood||"",e.absence?1:"",e.ras?1:"",cr.length||"",cr.length?Math.max(...cr.map(x=>+x.v||0)):"",e.note||"",
+      ...pains.map(k=>(e.pains&&e.pains[k]!=null)?e.pains[k]:""),
+      ...cats.flatMap(([cat,ks])=>ks.map(k=>(e[cat]||[]).includes(k)?1:"")),
+      ...tre.flatMap(id=>{const m=(e.meds||{})[id];return m&&m.taken?[m.n||1,RELIEF[m.relief]||""]:["",""];})];
+    rows.push(row.map(q).join(";"));});
+  download(`swanne-donnees-${todayStr()}.csv`,"﻿"+rows.join("\r\n"),"text/csv");
 }
 /* --- Restauration : validation + garde-fou --- */
 function isYmd(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}
+/* v88 : un fichier importé ne doit jamais pouvoir glisser du balisage dans la page
+   (les saisies de l'appli retirent déjà < et > ; un fichier modifié à la main, non). */
+function stripTags(o,depth){
+  depth=depth||0;if(depth>8||o==null)return o;
+  if(typeof o==="string")return o.replace(/[<>]/g,"");
+  if(Array.isArray(o)){for(let i=0;i<o.length;i++)o[i]=stripTags(o[i],depth+1);return o;}
+  if(typeof o==="object"){Object.keys(o).forEach(k=>{const nk=k.replace(/[<>]/g,"");const v=stripTags(o[k],depth+1);if(nk!==k)delete o[k];o[nk]=v;});return o;}
+  return o;
+}
 function parseBackup(text){
   let obj;try{obj=JSON.parse(text);}catch(e){return {ok:false,reason:"Le fichier n'est pas lisible (format JSON invalide)."};}
   if(obj&&typeof obj==="object"&&obj.data&&typeof obj.data==="object"&&!Array.isArray(obj.data)){
     const ks=Object.keys(obj.data);
     if(ks.length&&!ks.every(isYmd))return {ok:false,reason:"Ce fichier ne ressemble pas à une sauvegarde Swanne."};
-    return {ok:true,data:obj.data,config:(obj.config&&typeof obj.config==="object"&&!Array.isArray(obj.config))?obj.config:null,count:ks.length};
+    return {ok:true,data:stripTags(obj.data),config:(obj.config&&typeof obj.config==="object"&&!Array.isArray(obj.config))?stripTags(obj.config):null,count:ks.length};
   }
-  if(obj&&typeof obj==="object"&&!Array.isArray(obj)){const ks=Object.keys(obj);if(ks.length&&ks.every(isYmd))return {ok:true,data:obj,config:null,count:ks.length};}
+  if(obj&&typeof obj==="object"&&!Array.isArray(obj)){const ks=Object.keys(obj);if(ks.length&&ks.every(isYmd))return {ok:true,data:stripTags(obj),config:null,count:ks.length};}
   return {ok:false,reason:"Ce fichier n'est pas une sauvegarde Swanne."};
 }
 let pendingRestore=null;
@@ -2912,7 +3489,7 @@ function importData(file){
   r.onerror=()=>toast("Lecture du fichier impossible");
   r.readAsText(file);
 }
-function normalizeCfg(c){c.labels=c.labels||{};c.labels.regles="Règles";c.labels.spotting="Spotting";c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.treatments=c.treatments||[];c.questions=c.questions||[];c.theme=(c.theme==="dark")?"dark":"light";c.name=c.name||"";c.onboarded=true;c.appointment=c.appointment||"";c.pin=(c.pin!==undefined?c.pin:CFG.pin)||"";c.lastBackup=c.lastBackup||CFG.lastBackup||"";c.version=SCHEMA;return c;}
+function normalizeCfg(c){c.labels=c.labels||{};c.labels.regles="Règles";c.labels.spotting="Spotting";c.pains=c.pains||[];c.dig=c.dig||[];c.gen=c.gen||[];c.fog=c.fog||[];c.food=c.food||[];c.ptypes=c.ptypes||[];c.treatments=c.treatments||[];c.questions=c.questions||[];c.theme=(c.theme==="dark")?"dark":"light";c.name=c.name||"";c.onboarded=true;c.appointment=c.appointment||"";c.pin=(c.pin!==undefined?c.pin:CFG.pin)||"";c.lastBackup=c.lastBackup||CFG.lastBackup||"";c.reminder=CFG.reminder;c.rmdInvite=CFG.rmdInvite;c.version=SCHEMA;return c;}
 function mergeCfg(c){Object.assign(CFG.labels,c.labels||{});CFG.labels.regles="Règles";CFG.labels.spotting="Spotting";["pains","dig","gen","fog","food","ptypes"].forEach(cat=>{CFG[cat]=CFG[cat]||[];(c[cat]||[]).forEach(k=>{if(!CFG[cat].includes(k))CFG[cat].push(k);});});(c.treatments||[]).forEach(t=>{if(t&&t.id&&!CFG.treatments.some(x=>x.id===t.id))CFG.treatments.push(t);});(c.questions||[]).forEach(q=>{if(q&&q.id&&!CFG.questions.some(x=>x.id===q.id))CFG.questions.push(q);});if(!CFG.name&&c.name)CFG.name=c.name;if(!CFG.driveClientId&&c.driveClientId)CFG.driveClientId=c.driveClientId;if(!CFG.appointment&&c.appointment)CFG.appointment=c.appointment;}
 function refreshSuiviIfOpen(){if(document.getElementById("view-suivi").classList.contains("on"))renderSuiviSub();}
 async function applyRestore(mode){
@@ -2924,8 +3501,9 @@ async function applyRestore(mode){
   let added=0;
   if(mode==="replace"){DATA=inc.data;if(inc.config)CFG=normalizeCfg(inc.config);}
   else{Object.keys(inc.data).forEach(d=>{if(!DATA[d]){DATA[d]=inc.data[d];added++;}});if(inc.config)mergeCfg(inc.config);}
-  await saveData();await saveConfig();applyTheme();applyBigText();buildForm();setDate(curDate);refreshSuiviIfOpen();
-  showSnack(mode==="replace"?"Données remplacées":`Fusion : ${added} ${plr(added,"journée ajoutée","journées ajoutées")}`,async()=>{DATA=backupData;CFG=backupCfg;await saveData();await saveConfig();applyTheme();applyBigText();buildForm();setDate(curDate);refreshSuiviIfOpen();toast("Restauration annulée");});
+  const wc=document.getElementById("welcome");if(wc&&wc.classList.contains("show")){CFG.onboarded=true;wc.classList.remove("show");updateGreeting();}
+  await saveData();await saveConfig();applyTheme();applyBigText();buildForm();setDate(curDate);refreshSuiviIfOpen();rmdSync();
+  showSnack(mode==="replace"?"Données remplacées":`Fusion : ${added} ${plr(added,"journée ajoutée","journées ajoutées")}`,async()=>{DATA=backupData;CFG=backupCfg;await saveData();await saveConfig();applyTheme();applyBigText();buildForm();setDate(curDate);refreshSuiviIfOpen();rmdSync();toast("Restauration annulée");});
 }
 
 /* ===== Google Drive (sauvegarde automatique) ===== */
@@ -3006,12 +3584,36 @@ function driveDisconnect(){
   driveToken=null;driveTokenExp=0;CFG.driveConnected=false;CFG.driveAuto=false;saveConfig();renderDrive();toast("Drive déconnecté");
 }
 function scheduleDriveBackup(){
-  if(!CFG.driveAuto||!CFG.driveConnected)return;
+  if(NATIVE||!CFG.driveAuto||!CFG.driveConnected)return;
   clearTimeout(driveTimer);
   driveTimer=setTimeout(()=>{driveUpload(false).then(()=>renderDrive()).catch(()=>{});},4000);
 }
+/* ===== v91 : copie de secours chiffrée dans le compte Google (appli Android), au choix ===== */
+async function renderBackupChoice(area){
+  const card=area.closest(".card");if(!card)return;
+  if(!card._bk){card._bk=true;card.id="bk-card";card.innerHTML=`<h2 style="font-size:18px;margin-bottom:8px">Sauvegarde</h2>
+    <div class="lbl" style="margin-bottom:6px">Copie de secours automatique</div><div class="seg" id="bk-onoff"></div>
+    <p class="sec-note" id="bk-note" style="margin:10px 0 0"></p><div id="bk-warn"></div>
+    <p class="sec-note" style="margin:10px 0 0">Vous pouvez aussi garder un fichier : Mon suivi → Récapitulatif → <b>Sauvegarder mes données</b>, puis Drive, e-mail ou Fichiers. Pour le reprendre : <b>Restaurer</b>.</p>
+    <div id="drive-area" hidden></div>`;}
+  const st=(SwNative.backup?await SwNative.backup.get():{on:false,secure:false,unavailable:true});
+  if(CFG.cloudBackupOn!==!!st.on){CFG.cloudBackupOn=!!st.on;saveConfig();}
+  const seg=document.getElementById("bk-onoff"),note=document.getElementById("bk-note"),warn=document.getElementById("bk-warn");if(!seg)return;
+  seg.innerHTML=[["on","Activée"],["off","Désactivée"]].map(([k,l])=>`<button class="chip${(k==="on")===!!st.on?" on":""}" data-k="${k}" aria-pressed="${(k==="on")===!!st.on}">${l}</button>`).join("");
+  seg.querySelectorAll(".chip").forEach(b=>b.onclick=async()=>{
+    const want=b.dataset.k==="on";if(want===!!st.on)return;
+    try{const r=await SwNative.backup.set(want);CFG.cloudBackupOn=!!r.on;if(want)CFG.bkEverOn=true;await saveConfig();buzz(12);
+      toast(want?(r.secure?"Copie de secours activée":"Activée, mais il faut un code de verrouillage sur le téléphone"):"Copie de secours désactivée");}
+    catch(e){toast("Réglage impossible : "+(e&&e.message||e));}
+    renderDrive();});
+  note.innerHTML=st.on
+    ?"Activée. Android fait la copie de lui-même (en général la nuit, en charge et en Wi-Fi) si la sauvegarde du téléphone est active. Chiffrée avec le code du téléphone : personne d'autre, pas même nous, ne peut la lire."
+    :"Désactivée. Si vous l'activez, Android garde une copie chiffrée avec le code de votre téléphone dans votre compte Google, et la remet en place si vous changez de téléphone. Personne d'autre, pas même nous, ne peut la lire."+(CFG.bkEverOn?" Une copie déjà faite peut être supprimée depuis Google Drive (Sauvegardes).":"");
+  warn.innerHTML=(st.on&&!st.secure)?`<div class="rmd-warn">Votre téléphone n'a pas de code de verrouillage : la copie ne peut pas être chiffrée, Android ne l'enverra donc pas. Ajoutez un code dans les paramètres du téléphone pour qu'elle fonctionne.</div>`:"";
+}
 function renderDrive(){
   const area=document.getElementById("drive-area");if(!area)return;
+  if(NATIVE){renderBackupChoice(area);return;}
   const last=CFG.driveLastBackup?new Date(CFG.driveLastBackup).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):null;
   if(!CFG.driveConnected){
     area.innerHTML=`<p class="sec-note" style="margin:0 0 10px">Sauvegarde automatique dans <b>votre</b> Google Drive (vos données restent chez vous, nous n'y avons pas accès).</p>
@@ -3037,6 +3639,7 @@ function renderDrive(){
 
 /* ===== PWA : stockage persistant + service worker ===== */
 function installManifest(){
+  if(NATIVE)return; /* appli native : fichiers déjà dans l'appli, pas de service worker */
   if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{});}
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").then(reg=>{
@@ -3091,21 +3694,43 @@ function toggleCard(card,key){
   card.classList.toggle("collapsed",collapsed);
   CFG.cards=CFG.cards||{};CFG.cards[key]=collapsed;saveConfig();
 }
+/* ===== Appli Android native : bouton retour, écran de lancement, liens externes ===== */
+function nativeBack(){
+  const open=openSheets();
+  if(open.length){dismissSheet(open[open.length-1].id);return;}
+  const welcome=document.getElementById("welcome"),lock=document.getElementById("lock");
+  if((welcome&&welcome.classList.contains("show"))||(lock&&lock.classList.contains("show"))){SwNative.minimize();return;}
+  const today=document.getElementById("view-today");
+  if(today&&!today.classList.contains("on")){showTab("today");return;}
+  SwNative.minimize();
+}
+if(NATIVE){
+  SwNative.onBack(nativeBack);
+  document.addEventListener("swanne-ready",()=>SwNative.ready());
+  if(window.__swanneReady)SwNative.ready();
+  /* liens vers le site (politique de confidentialité…) : ouverts dans le navigateur */
+  document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[href]");if(!a)return;const h=a.getAttribute("href");if(!h||h.startsWith("#")||h.startsWith("javascript:"))return;
+    e.preventDefault();SwNative.openUrl(new URL(h,"https://sfappli.github.io/swanne/").href).catch(()=>{});},true);
+}
 /* ===== Quoi de neuf (affiché une fois par version) ===== */
+/* Chaque nouveauté porte la version qui l'a introduite ; « native » = appli Android seulement.
+   Au lancement, on n'annonce que ce qui est plus récent que la dernière version vue. */
 const WHATSNEW=[
- "Les crises comptent désormais comme des journées douloureuses : récapitulatif, calendrier et tendances.",
- "Profil de la douleur : le récapitulatif donne la fréquence et l'intensité de la douleur pendant et en dehors des règles, plutôt qu'une étiquette « cyclique / mixte ».",
- "Évolution : la synthèse compare à la fois le nombre de jours douloureux et leur intensité.",
- "Traitements : l'évolution compare le mois avant le début aux 30 derniers jours, après au moins 4 semaines de recul.",
- "Alimentation : chaque jour est comparé en tenant compte de la douleur de la veille, sur 6 mois d'historique. Moins de fausses pistes, et les vrais liens sont mieux repérés.",
- "Observations croisées (fatigue, stress, chaleur) : seuls les écarts peu compatibles avec le hasard sont signalés.",
- "Cycles mieux reconnus, saignement entre les règles signalé, symptômes « défécation » et « urinaire » comptés une seule fois.",
- "Le texte partagé reprend exactement le contenu du récapitulatif imprimé.",
- "Ouverture plus fluide depuis l'appli installée : plus de second écran de chargement après celui du téléphone."
-];
-function openWhatsNew(){
+ {v:91,native:true,t:"Nouveau, si vous le souhaitez : une copie de secours chiffrée dans votre compte Google, pour retrouver vos données si vous changez de téléphone (Réglages → Sauvegarde). Désactivée tant que vous ne l'activez pas."},
+ {v:90,t:"Export tableur (.csv) complet : l'alimentation, le brouillard cérébral, la fatigue et les traitements y figurent désormais."},
+ {v:87,native:true,t:"Nouveau, si vous le souhaitez : un petit rappel pour noter votre journée (Réglages → Petit rappel). Désactivé tant que vous ne l'activez pas."},
+ "Nouvelle ouverture : le cygne se dessine et « Swanne. » apparaît, sur fond clair ou sombre selon votre thème — plus d'éclair blanc en thème sombre.",
+ "Récapitulatif imprimé plus lisible : le calendrier dès la première page, des textes plus grands, et sur chaque feuille la période, votre nom s'il est renseigné et le numéro de page.",
+ "Alimentation : les jours avec l'aliment et les autres jours sont comparés côte à côte, avec l'écart.",
+ "Courbes d'évolution : les jours isolés restent visibles et les jours non notés apparaissent en pointillés.",
+ "Confirmations et saisies au style de l'application, et une coche « C'est noté » quand vous enregistrez votre journée.",
+ "Défilement plus fluide, silhouette plus lisible, chiffres de Mon suivi mieux rangés."
+].map(x=>typeof x==="string"?{v:86,t:x}:x);
+const WHATSNEW_V=Math.max(...WHATSNEW.filter(x=>!x.native||NATIVE).map(x=>x.v));
+function openWhatsNew(since){
+  const items=WHATSNEW.filter(x=>(!x.native||NATIVE)&&(typeof since!=="number"||x.v>since));
   const ul=document.getElementById("wn-list");ul.innerHTML="";
-  WHATSNEW.forEach(t=>{const li=document.createElement("li");li.textContent=t;ul.appendChild(li);});
+  items.forEach(x=>{const li=document.createElement("li");li.textContent=x.t;ul.appendChild(li);});
   document.getElementById("wn-bg").classList.add("show");
 }
 /* Rappel doux : si ≥14 jours de données et aucune sauvegarde externe (fichier ou Drive)
@@ -3114,18 +3739,21 @@ function maybeNudgeBackup(){
   if(!CFG.onboarded)return;
   const wn=document.getElementById("wn-bg");if(wn&&wn.classList.contains("show"))return;
   if(Object.keys(DATA).length<14)return;
+  if(NATIVE&&CFG.cloudBackupOn)return; /* v91 : la copie de secours s'en charge */
   const M=86400000;
   const last=Math.max(CFG.lastBackup?Date.parse(CFG.lastBackup)||0:0, CFG.driveLastBackup?Date.parse(CFG.driveLastBackup)||0:0);
   if(last&&Date.now()-last<30*M)return;
   if(CFG.lastNudgeAt&&Date.now()-(Date.parse(CFG.lastNudgeAt)||0)<7*M)return;
   CFG.lastNudgeAt=new Date().toISOString();saveConfig();
-  showSnack("Pensez à mettre vos données à l'abri (fichier ou Drive).",()=>shareBackup(),"Exporter");
+  showSnack(NATIVE?"Pensez à mettre vos données à l'abri (fichier, ou copie de secours dans Réglages).":"Pensez à mettre vos données à l'abri (fichier ou Drive).",()=>shareBackup(),"Exporter");
 }
 function maybeShowWhatsNew(){
   if(!CFG.onboarded){CFG.lastSeenVersion=APP_VERSION;return;}
   if(CFG.lastSeenVersion===APP_VERSION)return;
+  const seen=parseInt(CFG.lastSeenVersion,10)||0;
   CFG.lastSeenVersion=APP_VERSION;saveConfig();
-  openWhatsNew();
+  if(seen>=WHATSNEW_V)return;   /* rien de nouveau à annoncer depuis cette version (ex. 83 → 84 : seule l'ouverture change) */
+  window.__wnAuto=true;openWhatsNew(seen);
 }
 /* Toast MAJ : uniquement si une nouvelle version arrive PENDANT l'utilisation.
    Dans la minute qui suit l'ouverture, la page vient déjà du réseau (donc à jour) :
@@ -3134,9 +3762,11 @@ function notifyUpdateReady(){
   if(Date.now()-BOOT_T<60000)return;
   showSnack("Une nouvelle version de Swanne. est prête",()=>location.reload(),"Recharger");
 }
+function copyText(t){return NATIVE?SwNative.copy(t):navigator.clipboard.writeText(t);}
 async function shareRecap(){
   const sel=docSelection();
   const text=reportPlainText(sel.days,sel.meta);
+  if(NATIVE){try{await SwNative.shareText("Récapitulatif Swanne.",text);}catch(e){/* annulé */}return;}
   if(navigator.share){
     try{await navigator.share({title:"Récapitulatif Swanne.",text});}catch(e){/* annulé par l'utilisatrice */}
   }else{
@@ -3147,19 +3777,33 @@ async function shareRecap(){
 async function init(){
   await loadConfig();applyTheme();applyBigText();
   installManifest();
-  DATA=await loadData();if(normalizeData(DATA))await saveData();
-  buildForm();setDate(todayStr());setupCards();
-  refreshReminder();refreshBackup();
-  if(!CFG.onboarded)showWelcome();
+  DATA=await loadData();
+  {const st=applyPendingStash(),nd=normalizeData(DATA);if(st||nd){if(await saveData()){try{localStorage.removeItem(STASH_KEY);}catch(e){}}}}
+  buildForm();setDate(todayStr());setupCards();shownToday=todayStr();
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")stashNow();else onAppVisible();});
+  window.addEventListener("pagehide",stashNow);
+  if(NATIVE){if(SwNative.onPause)SwNative.onPause(stashNow);if(SwNative.onResume)SwNative.onResume(onAppVisible);}
+  refreshBackup();
+  if(storeUnreadable.length){
+    askInfo({title:"Certaines données n'ont pas pu être relues",text:"Une partie de ce qui était enregistré sur ce téléphone est illisible. Une copie a été mise de côté, rien n'est effacé.\nSi vous avez un fichier de sauvegarde, restaurez-le : Mon suivi → Récapitulatif → Restaurer.\nVous pouvez aussi nous écrire : Réglages → Signaler un problème."});
+  }
+  else if(!CFG.onboarded)showWelcome();
   maybeShowWhatsNew();
+  rmdNudgeDecide();refreshReminder();
+  if(rmdAvailable()){
+    SwNative.notif.onTap(()=>{if(curDate!==todayStr())setDate(todayStr());showTab("today");});
+    if(SwNative.onResume)SwNative.onResume(rmdOnResume);
+    rmdSync();
+  }
   setTimeout(maybeNudgeBackup,2500);
   if(navigator.storage&&navigator.storage.persisted){navigator.storage.persisted().then(p=>p||(navigator.storage.persist?navigator.storage.persist():false)).then(p=>{const el=document.getElementById("app-about");if(el&&p&&!/protégé/.test(el.textContent))el.textContent+=" · stockage protégé ✓";}).catch(()=>{});}
   document.getElementById("wn-ok").onclick=()=>document.getElementById("wn-bg").classList.remove("show");
   document.getElementById("wn-bg").onclick=e=>{if(e.target.id==="wn-bg")document.getElementById("wn-bg").classList.remove("show");};
-  document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil, sauf sauvegarde Drive que vous activez";
+  document.getElementById("app-about").textContent="Swanne. · version "+APP_VERSION+" · vos données restent sur votre appareil, sauf "+(NATIVE?"copie de secours":"sauvegarde Drive")+" que vous activez";
   document.getElementById("report-issue").onclick=()=>{
     const body=encodeURIComponent("Bonjour,\n\nJe rencontre un problème avec Swanne. :\n\n(décrivez le problème ici — n'hésitez pas à joindre une capture d'écran)\n\n—\nVersion : v"+APP_VERSION+"\nAppareil : "+navigator.userAgent);
-    location.href="mailto:sfappli.contact@gmail.com?subject="+encodeURIComponent("Swanne. v"+APP_VERSION+" — signalement")+"&body="+body;
+    const mail="mailto:sfappli.contact@gmail.com?subject="+encodeURIComponent("Swanne. v"+APP_VERSION+(NATIVE?" (appli)":"")+" — signalement")+"&body="+body;
+    if(NATIVE)SwNative.openUrl(mail).catch(()=>toast("Aucune appli d'e-mail trouvée : écrivez à sfappli.contact@gmail.com"));else location.href=mail;
   };
   document.getElementById("share-recap-btn").onclick=shareRecap;
   document.getElementById("show-wn").onclick=openWhatsNew;
@@ -3169,6 +3813,7 @@ async function init(){
   pn.addEventListener("change",()=>{CFG.printName=cleanText(pn.value,80);pn.value=CFG.printName;saveConfig();});
   pd.addEventListener("change",()=>{CFG.birthdate=pd.value||"";saveConfig();});
   document.getElementById("wc-start").onclick=finishWelcome;
+  document.getElementById("wc-restore").onclick=()=>document.getElementById("import-file").click();
   document.getElementById("wc-name").addEventListener("keydown",e=>{if(e.key==="Enter")finishWelcome();});
 
   document.getElementById("suivi-link").onclick=()=>showTab("suivi");
@@ -3182,6 +3827,10 @@ async function init(){
   document.getElementById("date-pick").onclick=()=>{const di=document.getElementById("date-input");di.max=todayStr();try{di.showPicker();}catch(e){di.style.pointerEvents="auto";di.focus();di.click();}};
   document.getElementById("date-input").onchange=e=>{if(e.target.value)setDate(e.target.value>todayStr()?todayStr():e.target.value);};
   document.getElementById("save-btn").onclick=()=>saveCurrent(false);
+  /* v86 : filet sous la barre du haut seulement quand la page est défilée (sans écouteur de défilement) */
+  try{const hd=document.querySelector("header.app"),sn=document.getElementById("top-sentinel");
+    if(hd&&sn&&"IntersectionObserver" in window)new IntersectionObserver(es=>{hd.classList.toggle("scrolled",!es[0].isIntersecting);}).observe(sn);
+    else if(hd)hd.classList.add("scrolled");}catch(e){}
   document.getElementById("delete-day").onclick=deleteDay;
   document.getElementById("qa-same").onclick=quickSame;
   document.getElementById("qa-ras").onclick=quickRAS;
@@ -3203,8 +3852,8 @@ async function init(){
   document.querySelectorAll("#range-pick button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#range-pick button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderTrack();});
   document.querySelectorAll("#doc-range-pick button").forEach(b=>b.onclick=()=>{if(b.dataset.mode==="rdv"&&!CFG.lastAppt){toast("Renseignez la date du dernier rendez-vous dans les Réglages.");return;}document.querySelectorAll("#doc-range-pick button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderDoc();});
 
-  document.getElementById("print-btn").onclick=()=>{const sel=docSelection();const pr=document.getElementById("print-region");pr.innerHTML=buildReportHtml(sel.days,true,sel.meta);const A=aggregate(sel.days);window.__printLight=true;renderCalendar(A,"cal-doc",pr);window.__printLight=false;window.print();};
-  document.getElementById("copy-btn").onclick=async()=>{const sel=docSelection();try{await navigator.clipboard.writeText(reportPlainText(sel.days,sel.meta));const b=document.getElementById("copy-btn");const o=b.textContent;b.textContent="Copié ✓";setTimeout(()=>b.textContent=o,1500);}catch(e){toast("Copie impossible sur ce navigateur");}};
+  document.getElementById("print-btn").onclick=()=>{const sel=docSelection();const pr=document.getElementById("print-region");pr.innerHTML=buildReportHtml(sel.days,true,sel.meta);const A=aggregate(sel.days);setPrintPages(A);window.__printLight=true;renderCalendar(A,"cal-doc",pr);window.__printLight=false;if(NATIVE)SwNative.print("Swanne. — récapitulatif").catch(e=>toast("Impression impossible : "+(e&&e.message||e)));else window.print();};
+  document.getElementById("copy-btn").onclick=async()=>{const sel=docSelection();try{await copyText(reportPlainText(sel.days,sel.meta));const b=document.getElementById("copy-btn");const o=b.textContent;b.textContent="Copié ✓";setTimeout(()=>b.textContent=o,1500);}catch(e){toast("Copie impossible sur ce navigateur");}};
   document.getElementById("share-btn").onclick=shareBackup;
   document.getElementById("csv-btn").onclick=exportCSV;
   document.getElementById("import-btn").onclick=()=>document.getElementById("import-file").click();
@@ -3228,6 +3877,14 @@ async function init(){
 </script>
 <script>
 (function(){var b=document.getElementById("boot");if(!b)return;var t0=Date.now(),done=false;
+if(window.__bootNative){
+  var ANIM=(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)?700:2000; /* cygne dessiné ≈1 s, nom posé ≈1,85 s : ouverture de 2 s, puis fondu d'½ s */
+  var hideN=function(){if(done)return;done=true;var w=Math.max(0,ANIM-(Date.now()-(window.__bootGoT||Date.now())));setTimeout(function(){b.classList.add("boot-out");setTimeout(function(){if(b.parentNode)b.parentNode.removeChild(b);},620);},w);};
+  var readyN=function(){if(window.__bootGoT)hideN();else setTimeout(readyN,50);};
+  document.addEventListener("swanne-ready",readyN);if(window.__swanneReady)readyN();
+  setTimeout(function(){window.__bootGoT=window.__bootGoT||Date.now();hideN();},5000);return;
+}
+if(window.__bootNative){if(b.parentNode)b.parentNode.removeChild(b);return;}
 if(window.__bootPlain){
   /* appli installée : on retire le fond dès que l'écran est réellement dessiné, sans durée minimale */
   var go=function(){if(done)return;done=true;requestAnimationFrame(function(){requestAnimationFrame(function(){b.classList.add("boot-out");setTimeout(function(){if(b&&b.parentNode)b.parentNode.removeChild(b);},250);});});};
